@@ -38,12 +38,45 @@ export const CourseCatalogueView: React.FC<CourseCatalogueViewProps> = ({
   const [onlyRecommended, setOnlyRecommended] = useState(false);
   const [enrolledCourses, setEnrolledCourses] = useState<Record<string, number>>({});
 
+  const [selectedDomainTab, setSelectedDomainTab] = useState<string>('All');
+
   const fetchCourses = async () => {
     setIsLoading(true);
     try {
-      const data = await ApiClient.getCourses();
-      if (Array.isArray(data) && data.length > 0) {
-        setCourses(data);
+      // Fetch both AI-ranked recommendations and complete catalogue
+      const [recs, catalogue] = await Promise.all([
+        ApiClient.getRecommendations().catch(() => []),
+        ApiClient.getCourses().catch(() => []),
+      ]);
+
+      const recsMap = new Map<string, Course>();
+      if (Array.isArray(recs)) {
+        recs.forEach((r) => recsMap.set(r.id, r));
+      }
+
+      const mergedCourses: Course[] = [];
+      const seenIds = new Set<string>();
+
+      // Put high match recommendations first
+      if (Array.isArray(recs)) {
+        recs.forEach((r) => {
+          mergedCourses.push(r);
+          seenIds.add(r.id);
+        });
+      }
+
+      if (Array.isArray(catalogue)) {
+        catalogue.forEach((c) => {
+          if (!seenIds.has(c.id)) {
+            const rec = recsMap.get(c.id);
+            mergedCourses.push(rec || c);
+            seenIds.add(c.id);
+          }
+        });
+      }
+
+      if (mergedCourses.length > 0) {
+        setCourses(mergedCourses);
       }
     } catch (err) {
       console.warn('Failed to fetch official courses from API:', err);
@@ -100,13 +133,30 @@ export const CourseCatalogueView: React.FC<CourseCatalogueViewProps> = ({
 
     const matchesSource =
       sourceFilter === 'All' ||
-      course.provider.toLowerCase().includes(sourceFilter.toLowerCase()) ||
-      course.tags.some((t) => t.toLowerCase().includes(sourceFilter.toLowerCase()));
+      (sourceFilter === 'NSSTA TPAC'
+        ? course.provider.toLowerCase().includes('nssta') ||
+          course.provider.toLowerCase().includes('tpac') ||
+          course.tags.some((t) => t.toLowerCase().includes('nssta') || t.toLowerCase().includes('tpac'))
+        : course.provider.toLowerCase().includes(sourceFilter.toLowerCase()) ||
+          course.tags.some((t) => t.toLowerCase().includes(sourceFilter.toLowerCase())));
     const matchesDifficulty = difficultyFilter === 'All' || course.difficulty === difficultyFilter;
     const matchesLanguage = languageFilter === 'All' || course.language === languageFilter;
     const matchesRecommended = !onlyRecommended || course.matchPercentage >= 85;
 
-    return matchesSearch && matchesSource && matchesDifficulty && matchesLanguage && matchesRecommended;
+    const matchesDomain =
+      selectedDomainTab === 'All' ||
+      (selectedDomainTab === 'Survey Sampling & Field' &&
+        (course.title.toLowerCase().includes('sampling') || course.tags.some(t => t.toLowerCase().includes('sampling') || t.toLowerCase().includes('plfs') || t.toLowerCase().includes('hces')) || course.competenciesGained.some(c => c.toLowerCase().includes('sampling')))) ||
+      (selectedDomainTab === 'Price & Inflation' &&
+        (course.title.toLowerCase().includes('price') || course.title.toLowerCase().includes('cpi') || course.tags.some(t => t.toLowerCase().includes('price') || t.toLowerCase().includes('cpi')))) ||
+      (selectedDomainTab === 'National Accounts & GVA' &&
+        (course.title.toLowerCase().includes('national accounts') || course.title.toLowerCase().includes('gva') || course.tags.some(t => t.toLowerCase().includes('accounts') || t.toLowerCase().includes('gva')))) ||
+      (selectedDomainTab === 'AI, Python & Data Science' &&
+        (course.title.toLowerCase().includes('ai') || course.title.toLowerCase().includes('python') || course.title.toLowerCase().includes('intelligence') || course.title.toLowerCase().includes('data science') || course.tags.some(t => t.toLowerCase().includes('ai') || t.toLowerCase().includes('python')))) ||
+      (selectedDomainTab === 'Administration & Leadership' &&
+        (course.title.toLowerCase().includes('governance') || course.title.toLowerCase().includes('leadership') || course.title.toLowerCase().includes('public') || course.tags.some(t => t.toLowerCase().includes('governance') || t.toLowerCase().includes('leadership'))));
+
+    return matchesSearch && matchesSource && matchesDifficulty && matchesLanguage && matchesRecommended && matchesDomain;
   });
 
   return (
@@ -154,6 +204,30 @@ export const CourseCatalogueView: React.FC<CourseCatalogueViewProps> = ({
 
       {/* Filter and Search Bar */}
       <div className="bg-white border border-zinc-300 p-5 space-y-4">
+        {/* Domain Category Tabs */}
+        <div className="flex flex-wrap items-center gap-1.5 pb-1">
+          {[
+            'All',
+            'Survey Sampling & Field',
+            'Price & Inflation',
+            'National Accounts & GVA',
+            'AI, Python & Data Science',
+            'Administration & Leadership',
+          ].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setSelectedDomainTab(tab)}
+              className={`px-3 py-1 text-xs font-technical uppercase tracking-wider transition-colors cursor-pointer border ${
+                selectedDomainTab === tab
+                  ? 'bg-zinc-950 text-amber-400 border-zinc-950 font-bold shadow-xs'
+                  : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border-zinc-300'
+              }`}
+            >
+              {tab === 'All' ? 'All Catalog (55+)' : tab}
+            </button>
+          ))}
+        </div>
+
         <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
           <div className="relative flex-1">
             <input
@@ -167,13 +241,14 @@ export const CourseCatalogueView: React.FC<CourseCatalogueViewProps> = ({
           </div>
 
           {/* Quick Clear */}
-          {(searchQuery || sourceFilter !== 'All' || difficultyFilter !== 'All' || onlyRecommended) && (
+          {(searchQuery || sourceFilter !== 'All' || difficultyFilter !== 'All' || onlyRecommended || selectedDomainTab !== 'All') && (
             <button
               onClick={() => {
                 setSearchQuery('');
                 setSourceFilter('All');
                 setDifficultyFilter('All');
                 setOnlyRecommended(false);
+                setSelectedDomainTab('All');
               }}
               className="px-3 py-2 text-xs font-technical uppercase tracking-wider text-zinc-600 hover:text-zinc-950 border border-zinc-300 hover:bg-zinc-100 transition-colors"
             >
@@ -195,6 +270,7 @@ export const CourseCatalogueView: React.FC<CourseCatalogueViewProps> = ({
               className="w-full bg-[#FAF9F6] border border-zinc-300 px-2 py-1.5 text-xs text-zinc-900 focus:outline-none"
             >
               <option value="All">All Official Portals</option>
+              <option value="NSSTA TPAC">NSSTA TPAC Recommended Programmes</option>
               <option value="iGOT Karmayogi">portal.igotkarmayogi.gov.in (iGOT Karmayogi)</option>
               <option value="SADHANA Saptah">SADHANA Saptah (Curated iGOT Special)</option>
               <option value="nssta.gov.in">nssta.gov.in (NSSTA Academy)</option>

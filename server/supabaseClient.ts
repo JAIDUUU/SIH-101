@@ -1,15 +1,37 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const SUPABASE_PROJECT_ID = 'pqynnzeyphgwpwctvcjw';
-const DEFAULT_SUPABASE_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co`;
-const DEFAULT_SUPABASE_KEY = 'sb_publishable_MSmfQAsGn1qsmSNOHLUNCQ_yWoQl0eu';
+export const supabaseProjectId = process.env.SUPABASE_PROJECT_ID || '';
+export const supabaseUrl =
+  process.env.SUPABASE_URL ||
+  process.env.VITE_SUPABASE_URL ||
+  (supabaseProjectId ? `https://${supabaseProjectId}.supabase.co` : '');
 
-export const supabaseUrl = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
-export const supabaseKey = process.env.SUPABASE_KEY || DEFAULT_SUPABASE_KEY;
+export const supabaseKey =
+  process.env.SUPABASE_KEY ||
+  process.env.SUPABASE_PUBLISHABLE_KEY ||
+  process.env.SUPABASE_ANON_KEY ||
+  process.env.VITE_SUPABASE_ANON_KEY ||
+  '';
+
+export function getProjectId(): string {
+  if (supabaseProjectId) return supabaseProjectId;
+  if (supabaseUrl) {
+    try {
+      const parsed = new URL(supabaseUrl);
+      return parsed.hostname.split('.')[0] || 'configured-instance';
+    } catch {
+      return 'configured-instance';
+    }
+  }
+  return 'not-configured';
+}
 
 let supabaseInstance: SupabaseClient | null = null;
 
-export function getSupabase(): SupabaseClient {
+export function getSupabase(): SupabaseClient | null {
+  if (!supabaseUrl || !supabaseKey) {
+    return null;
+  }
   if (!supabaseInstance) {
     supabaseInstance = createClient(supabaseUrl, supabaseKey, {
       auth: {
@@ -27,19 +49,33 @@ export async function testSupabaseConnection(): Promise<{
   url: string;
   error?: string;
 }> {
+  const projectId = getProjectId();
+  if (!supabaseUrl || !supabaseKey) {
+    return {
+      connected: false,
+      projectId,
+      url: supabaseUrl || 'Not configured',
+      error: 'SUPABASE_URL or SUPABASE_KEY environment variable is not set',
+    };
+  }
+
   try {
     const client = getSupabase();
-    // Test connection with a lightweight probe
-    const { data, error } = await client.from('_probe_test').select('*').limit(1);
-    
-    // In Supabase, if the table doesn't exist, it still returns a 404/PGRST204/PGRST116 which confirms
-    // network connectivity and valid authentication with the Supabase API Gateway!
+    if (!client) {
+      return {
+        connected: false,
+        projectId,
+        url: supabaseUrl,
+        error: 'Supabase client could not be initialized',
+      };
+    }
+    const { error } = await client.from('_probe_test').select('*').limit(1);
+
     if (error && error.code !== 'PGRST204' && error.code !== 'PGRST116' && error.code !== '42P01') {
-      // If error is unauthorized or invalid key:
       if (error.message && (error.message.includes('JWT') || error.message.includes('apikey'))) {
         return {
           connected: false,
-          projectId: SUPABASE_PROJECT_ID,
+          projectId,
           url: supabaseUrl,
           error: error.message,
         };
@@ -48,13 +84,13 @@ export async function testSupabaseConnection(): Promise<{
 
     return {
       connected: true,
-      projectId: SUPABASE_PROJECT_ID,
+      projectId,
       url: supabaseUrl,
     };
   } catch (err: any) {
     return {
       connected: false,
-      projectId: SUPABASE_PROJECT_ID,
+      projectId,
       url: supabaseUrl,
       error: err.message || 'Failed to connect to Supabase endpoint',
     };

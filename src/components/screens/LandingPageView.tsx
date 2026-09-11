@@ -1,18 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrandMark } from '../common/BrandMark';
+import { LiveTelemetryTerminal } from './LiveTelemetryTerminal';
 import {
   ArrowRight,
-  ShieldCheck,
-  Brain,
   TrendingDown,
   Target,
   FileCheck2,
-  Users,
   Compass,
+  MessageSquare,
+  ShieldCheck,
   CheckCircle2,
+  AlertTriangle,
   Layers,
-  Award,
-  BarChart2,
+  Sparkles,
+  Terminal,
+  Activity,
+  Cpu,
 } from 'lucide-react';
 
 interface LandingPageViewProps {
@@ -26,218 +29,466 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
   onExplore,
   onSelectRole,
 }) => {
+  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+
+  const handleScrollToWorkflow = () => {
+    const el = document.getElementById('how-it-works');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      onExplore();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#111215] flex flex-col font-sans">
-      {/* Hero Section */}
-      <section className="relative border-b border-zinc-200 bg-white py-20 px-6 sm:px-12 lg:px-24 overflow-hidden bg-grid-subtle">
-        {/* Subtle geometric line element */}
+      {/* 1. Hero Section with Live Telemetry Terminal */}
+      <section className="relative border-b border-zinc-200/90 bg-white pt-12 pb-16 sm:pt-16 sm:pb-20 lg:pt-20 lg:pb-24 px-5 sm:px-10 lg:px-20 overflow-hidden bg-grid-subtle">
         <div className="max-w-5xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-zinc-100 border border-zinc-300 text-xs font-technical text-zinc-800 uppercase tracking-widest mb-6">
-            <span className="w-2 h-2 bg-amber-500" />
-            AI-POWERED SKILL INTELLIGENCE PLATFORM
+          {/* Terminal Command Line + Institutional Badges */}
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-zinc-950 text-amber-400 rounded-md border border-zinc-900 text-xs font-technical uppercase tracking-wider font-bold">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-subtle-pulse" />
+                MoSPI // DIID
+              </div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-zinc-100 rounded-md border border-zinc-300/80 text-xs font-technical text-zinc-800 uppercase tracking-wider font-medium">
+                iGOT Karmayogi &amp; NSSTA Integrated
+              </div>
+            </div>
+
+            {/* Terminal status with continuous blinking caret */}
+            <div className="hidden sm:inline-flex items-center gap-2 px-3 py-1 bg-[#FAF9F7] rounded-md border border-zinc-200 text-xs font-technical text-zinc-700">
+              <Terminal className="w-3.5 h-3.5 text-zinc-500" />
+              <span>$ skill-sutra --mode live-telemetry</span>
+              <span className="inline-block w-2 h-3.5 bg-amber-500 animate-terminal-blink align-middle ml-0.5" />
+            </div>
           </div>
 
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-zinc-950 font-heading leading-[1.08] mb-6">
-            Understand skills. <br />
-            Close gaps. <br />
-            <span className="italic font-editorial font-normal text-zinc-800 underline decoration-amber-400 decoration-4 underline-offset-8">
-              Build future-ready officials.
-            </span>
+          {/* Hero Headline */}
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-zinc-950 font-heading leading-[1.12] mb-3">
+            Know what your officers need to learn.
           </h1>
-
-          <p className="max-w-2xl text-lg sm:text-xl text-zinc-600 font-sans font-normal leading-relaxed mb-10">
-            A specialized competency intelligence architecture for India's Official Statistical System. 
-            Calibrating designations, survey experience, and verifiable mastery with iGOT Karmayogi and NSSTA curricula.
+          <p className="text-xl sm:text-2xl text-amber-800 font-heading font-medium tracking-tight mb-5">
+            AI-powered competency intelligence for India's Official Statistical System.
           </p>
 
-          <div className="flex flex-wrap items-center gap-4">
+          {/* Hero Summary */}
+          <p className="max-w-2xl text-base sm:text-lg text-zinc-600 font-sans leading-relaxed mb-8">
+            Skill Sutra builds a role-specific competency profile, identifies skill gaps, recommends relevant training, and verifies learning through AI-powered assessments.
+          </p>
+
+          {/* Action CTAs */}
+          <div className="flex flex-wrap items-center gap-3.5 mb-12">
             <button
+              id="hero-get-started-btn"
               onClick={onGetStarted}
-              className="px-7 py-3.5 bg-zinc-950 hover:bg-black text-white text-sm font-technical uppercase tracking-wider font-semibold flex items-center gap-3 transition-all border border-zinc-900 shadow-sm"
+              className="px-7 py-3.5 bg-zinc-950 hover:bg-black text-white text-xs font-technical uppercase tracking-wider font-semibold rounded-lg flex items-center gap-3 transition-all duration-200 hover:-translate-y-0.5 border border-zinc-900 shadow-sm cursor-pointer"
             >
-              <span>Get Started</span>
+              <span>GET STARTED</span>
               <ArrowRight className="w-4 h-4 text-amber-400" />
             </button>
             <button
-              onClick={onExplore}
-              className="px-7 py-3.5 bg-amber-400 hover:bg-amber-300 text-zinc-950 text-sm font-technical uppercase tracking-wider font-bold flex items-center gap-3 transition-all border border-amber-500 shadow-sm"
+              id="hero-see-how-it-works-btn"
+              onClick={handleScrollToWorkflow}
+              className="px-7 py-3.5 bg-amber-400 hover:bg-amber-300 text-zinc-950 text-xs font-technical uppercase tracking-wider font-bold rounded-lg flex items-center gap-3 transition-all duration-200 hover:-translate-y-0.5 border border-amber-500 shadow-sm cursor-pointer"
             >
-              <span>Explore Platform</span>
+              <span>SEE HOW IT WORKS</span>
               <Compass className="w-4 h-4 text-zinc-950" />
             </button>
           </div>
 
-          {/* Metric Micro-Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 pt-12 mt-12 border-t border-zinc-200">
-            <div>
-              <div className="text-2xl sm:text-3xl font-bold font-heading text-zinc-950">6,800+</div>
-              <div className="text-xs font-technical text-zinc-500 uppercase mt-1">Official Statistical Cadre</div>
+          {/* Live Telemetry Terminal Window */}
+          <div className="mb-12">
+            <div className="flex items-center justify-between mb-2 px-1">
+              <div className="flex items-center gap-2 text-xs font-technical text-zinc-500 uppercase tracking-wider">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-beacon-green" />
+                <span>REAL-TIME SYSTEM STREAM // NSSTA EVALUATION GATEWAY</span>
+              </div>
+              <span className="text-[11px] font-technical text-zinc-400 font-bold">
+                OFFICIAL NATIONAL PORTAL
+              </span>
             </div>
-            <div>
-              <div className="text-2xl sm:text-3xl font-bold font-heading text-zinc-950">9 Domains</div>
-              <div className="text-xs font-technical text-zinc-500 uppercase mt-1">Competency Rubrics</div>
+            <LiveTelemetryTerminal />
+          </div>
+
+          {/* Product Capabilities (Grounded Product Features with Terminal Micro-Cards) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-zinc-200/80">
+            <div className="terminal-card p-4.5 bg-white rounded-xl border border-zinc-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-[10px] font-technical font-bold text-amber-800 uppercase tracking-wider bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded">
+                    ROLE-SPECIFIC
+                  </span>
+                  <span className="text-[10px] font-technical text-zinc-400">[CAP-01]</span>
+                </div>
+                <div className="text-sm font-bold text-zinc-950 font-heading">Competency mapping</div>
+                <div className="text-xs text-zinc-600 mt-1 leading-relaxed">
+                  Designation, posting &amp; statistical domain aligned baselines.
+                </div>
+              </div>
+              <div className="mt-3 pt-2.5 border-t border-zinc-100 flex items-center gap-1.5 text-[11px] font-technical text-zinc-500">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-subtle-pulse" />
+                <span>MoSPI Cadres: JSO / SSO / ISS</span>
+              </div>
             </div>
-            <div>
-              <div className="text-2xl sm:text-3xl font-bold font-heading text-amber-600">Page-Level</div>
-              <div className="text-xs font-technical text-zinc-500 uppercase mt-1">NSSTA Source Verification</div>
+
+            <div className="terminal-card p-4.5 bg-white rounded-xl border border-zinc-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-[10px] font-technical font-bold text-amber-800 uppercase tracking-wider bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded">
+                    AI-POWERED
+                  </span>
+                  <span className="text-[10px] font-technical text-zinc-400">[CAP-02]</span>
+                </div>
+                <div className="text-sm font-bold text-zinc-950 font-heading">Assessment &amp; recommendations</div>
+                <div className="text-xs text-zinc-600 mt-1 leading-relaxed">
+                  Grounded skill gap detection paired with ranked iGOT modules.
+                </div>
+              </div>
+              <div className="mt-3 pt-2.5 border-t border-zinc-100 flex items-center gap-1.5 text-[11px] font-technical text-zinc-500">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-subtle-pulse" />
+                <span>Dynamic Gap Prioritization</span>
+              </div>
             </div>
-            <div>
-              <div className="text-2xl sm:text-3xl font-bold font-heading text-zinc-950">AI Projection</div>
-              <div className="text-xs font-technical text-zinc-500 uppercase mt-1">Predictive Skill Decay</div>
+
+            <div className="terminal-card p-4.5 bg-white rounded-xl border border-zinc-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-[10px] font-technical font-bold text-amber-800 uppercase tracking-wider bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded">
+                    SOURCE-GROUNDED
+                  </span>
+                  <span className="text-[10px] font-technical text-zinc-400">[CAP-03]</span>
+                </div>
+                <div className="text-sm font-bold text-zinc-950 font-heading">Quiz evidence</div>
+                <div className="text-xs text-zinc-600 mt-1 leading-relaxed">
+                  Questions extracted with chapter and page-level manual citations.
+                </div>
+              </div>
+              <div className="mt-3 pt-2.5 border-t border-zinc-100 flex items-center gap-1.5 text-[11px] font-technical text-zinc-500">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-subtle-pulse" />
+                <span>Faculty Review Before Publish</span>
+              </div>
+            </div>
+
+            <div className="terminal-card p-4.5 bg-white rounded-xl border border-zinc-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-[10px] font-technical font-bold text-amber-800 uppercase tracking-wider bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded">
+                    SKILL-READY
+                  </span>
+                  <span className="text-[10px] font-technical text-zinc-400">[CAP-04]</span>
+                </div>
+                <div className="text-sm font-bold text-zinc-950 font-heading">Readiness &amp; decay tracking</div>
+                <div className="text-xs text-zinc-600 mt-1 leading-relaxed">
+                  Timely refresher alerts based on elapsed interval &amp; syllabus.
+                </div>
+              </div>
+              <div className="mt-3 pt-2.5 border-t border-zinc-100 flex items-center gap-1.5 text-[11px] font-technical text-zinc-500">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-subtle-pulse" />
+                <span>Refreshed on Verified Exam</span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Section: Problem */}
-      <section className="py-16 px-6 sm:px-12 lg:px-24 border-b border-zinc-200 bg-[#FAF9F7]">
+      {/* 2. Challenge Section */}
+      <section className="py-16 sm:py-20 px-5 sm:px-10 lg:px-20 border-b border-zinc-200/90 bg-[#FAF9F7]">
         <div className="max-w-5xl mx-auto">
           <div className="flex items-center gap-2 text-xs font-technical uppercase text-amber-800 font-bold tracking-wider mb-2">
             <span>[SECTION 01]</span>
             <span>THE CHALLENGE</span>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-zinc-950 font-heading mb-4">
-            The Latency Problem in Official Statistics
+          <h2 className="text-2xl sm:text-3xl font-bold text-zinc-950 font-heading mb-3">
+            Why existing training is not enough
           </h2>
-          <p className="text-zinc-600 text-base max-w-3xl leading-relaxed mb-10">
-            Modern statistical work is rapidly transitioning from manual survey collection to automated CAPI, 
-            Python microdata processing, and geospatial integration. Traditional periodic seminars fail to diagnose 
-            rapidly decaying technical proficiencies before survey data quality is compromised.
+          <p className="text-zinc-600 text-sm sm:text-base max-w-3xl leading-relaxed mb-10">
+            Officials in India's statistical cadres handle critical, specialized operations across National Accounts, Price Statistics, and Field Operations. Traditional generic training lacks role-specific diagnostic depth.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 bg-white border border-zinc-300">
-              <div className="w-9 h-9 bg-zinc-100 border border-zinc-300 text-zinc-900 flex items-center justify-center font-technical font-bold text-xs mb-4">
+            <div className="terminal-card p-6 bg-white rounded-xl border border-zinc-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+              <div className="w-8 h-8 rounded-lg bg-zinc-100 border border-zinc-300 text-zinc-900 flex items-center justify-center font-technical font-bold text-xs mb-4">
                 01
               </div>
-              <h3 className="text-base font-bold text-zinc-950 mb-2 font-heading">Silent Skill Decay</h3>
+              <h3 className="text-sm font-bold text-zinc-950 mb-2 font-heading uppercase tracking-wide">
+                SKILL GAPS STAY HIDDEN
+              </h3>
               <p className="text-xs text-zinc-600 leading-relaxed">
-                Field officials trained in complex sampling formulas often lose active recall over months of repetitive administrative work without periodic refresher drills.
+                Officers may complete training without knowing which competencies still need improvement.
               </p>
+              <div className="mt-4 pt-3 border-t border-zinc-100 flex items-center gap-1.5 text-[11px] font-technical text-zinc-400">
+                <span>DIAGNOSTIC GAP</span>
+              </div>
             </div>
 
-            <div className="p-6 bg-white border border-zinc-300">
-              <div className="w-9 h-9 bg-zinc-100 border border-zinc-300 text-zinc-900 flex items-center justify-center font-technical font-bold text-xs mb-4">
+            <div className="terminal-card p-6 bg-white rounded-xl border border-zinc-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+              <div className="w-8 h-8 rounded-lg bg-zinc-100 border border-zinc-300 text-zinc-900 flex items-center justify-center font-technical font-bold text-xs mb-4">
                 02
               </div>
-              <h3 className="text-base font-bold text-zinc-950 mb-2 font-heading">Self-Assessment Gap</h3>
+              <h3 className="text-sm font-bold text-zinc-950 mb-2 font-heading uppercase tracking-wide">
+                ONE-SIZE-FITS-ALL TRAINING
+              </h3>
               <p className="text-xs text-zinc-600 leading-relaxed">
-                Appraisal systems rely on unchecked self-reporting, creating an invisible rift between claimed software proficiencies and verifiable field capabilities.
+                Different statistical roles require different competencies, tools and learning paths.
               </p>
+              <div className="mt-4 pt-3 border-t border-zinc-100 flex items-center gap-1.5 text-[11px] font-technical text-zinc-400">
+                <span>ROLE MISALIGNMENT</span>
+              </div>
             </div>
 
-            <div className="p-6 bg-white border border-zinc-300">
-              <div className="w-9 h-9 bg-zinc-100 border border-zinc-300 text-zinc-900 flex items-center justify-center font-technical font-bold text-xs mb-4">
+            <div className="terminal-card p-6 bg-white rounded-xl border border-zinc-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+              <div className="w-8 h-8 rounded-lg bg-zinc-100 border border-zinc-300 text-zinc-900 flex items-center justify-center font-technical font-bold text-xs mb-4">
                 03
               </div>
-              <h3 className="text-base font-bold text-zinc-950 mb-2 font-heading">Curricular Disconnect</h3>
+              <h3 className="text-sm font-bold text-zinc-950 mb-2 font-heading uppercase tracking-wide">
+                LEARNING IS HARD TO VERIFY
+              </h3>
               <p className="text-xs text-zinc-600 leading-relaxed">
-                Hundreds of high-quality courses on iGOT Karmayogi and NSSTA remain underutilized because officers lack personalized, competency-calibrated learning roadmaps.
+                Course completion alone does not show whether an officer can apply what they learned.
               </p>
+              <div className="mt-4 pt-3 border-t border-zinc-100 flex items-center gap-1.5 text-[11px] font-technical text-zinc-400">
+                <span>VERIFICATION DEFICIT</span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Section: How It Works */}
-      <section className="py-16 px-6 sm:px-12 lg:px-24 border-b border-zinc-200 bg-white">
+      {/* 3. Workflow Section */}
+      <section id="how-it-works" className="py-16 sm:py-20 px-5 sm:px-10 lg:px-20 border-b border-zinc-200/90 bg-white">
         <div className="max-w-5xl mx-auto">
           <div className="flex items-center gap-2 text-xs font-technical uppercase text-amber-800 font-bold tracking-wider mb-2">
             <span>[SECTION 02]</span>
             <span>SYSTEM WORKFLOW</span>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-zinc-950 font-heading mb-4">
-            How Skill Sutra Operates
+          <h2 className="text-2xl sm:text-3xl font-bold text-zinc-950 font-heading mb-3">
+            From Profile to Verified Competency
           </h2>
-          <p className="text-zinc-600 text-base max-w-3xl leading-relaxed mb-10">
-            A continuous loop from profile ingestion to predictive decay alerts, targeted learning, and verified passport credentialing.
+          <p className="text-zinc-600 text-sm sm:text-base max-w-3xl leading-relaxed mb-10">
+            A continuous intelligence loop that maps requirements, pinpoints gaps, and updates living competency records.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-5 border border-zinc-200 bg-[#FAFAFA] relative">
-              <span className="text-[11px] font-technical text-amber-600 font-bold block mb-1">STEP 1</span>
-              <h4 className="text-sm font-bold text-zinc-950 mb-1.5 font-heading">Profile Ingestion</h4>
-              <p className="text-xs text-zinc-600">
-                Maps designation, survey rounds, years of service, and baseline skills across 4 foundational domains.
-              </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {/* Step 01 */}
+            <div className="terminal-card p-5 rounded-xl border border-zinc-200/90 bg-white flex flex-col justify-between shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-technical text-amber-800 font-bold">01 PROFILE</span>
+                  <span className="w-2 h-2 rounded-full bg-zinc-300" />
+                </div>
+                <h4 className="text-sm font-bold text-zinc-950 mb-1.5 font-heading">Capture Officer Context</h4>
+                <p className="text-xs text-zinc-600 leading-relaxed">
+                  Capture role, department, assignment, experience and learning history.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-zinc-100 text-[11px] font-technical text-zinc-500">
+                MoSPI / NSO Cadre Mapping
+              </div>
             </div>
 
-            <div className="p-5 border border-zinc-200 bg-[#FAFAFA] relative">
-              <span className="text-[11px] font-technical text-amber-600 font-bold block mb-1">STEP 2</span>
-              <h4 className="text-sm font-bold text-zinc-950 mb-1.5 font-heading">Gap & Decay Engine</h4>
-              <p className="text-xs text-zinc-600">
-                Calculates readiness deltas and projects 3/6/12 month retention drop-offs for critical survey formulas.
-              </p>
+            {/* Step 02 */}
+            <div className="terminal-card p-5 rounded-xl border border-zinc-200/90 bg-white flex flex-col justify-between shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-technical text-amber-800 font-bold">02 ASSESS</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-subtle-pulse" />
+                </div>
+                <h4 className="text-sm font-bold text-zinc-950 mb-1.5 font-heading">Diagnostic Evaluation</h4>
+                <p className="text-xs text-zinc-600 leading-relaxed">
+                  Measure current competency against role-specific requirements.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-zinc-100 text-[11px] font-technical text-zinc-500">
+                Self-Assessed vs Verified Scores
+              </div>
             </div>
 
-            <div className="p-5 border border-zinc-200 bg-[#FAFAFA] relative">
-              <span className="text-[11px] font-technical text-amber-600 font-bold block mb-1">STEP 3</span>
-              <h4 className="text-sm font-bold text-zinc-950 mb-1.5 font-heading">iGOT / NSSTA Matching</h4>
-              <p className="text-xs text-zinc-600">
-                Prescribes modular learning paths and auto-generates source-cited quizzes from manual PDFs.
-              </p>
+            {/* Step 03 */}
+            <div className="terminal-card p-5 rounded-xl border border-zinc-200/90 bg-white flex flex-col justify-between shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-technical text-amber-800 font-bold">03 FIND THE GAP</span>
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-subtle-pulse" />
+                </div>
+                <h4 className="text-sm font-bold text-zinc-950 mb-1.5 font-heading">Identify Vulnerabilities</h4>
+                <p className="text-xs text-zinc-600 leading-relaxed">
+                  Identify the most important skills missing or at risk.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-zinc-100 text-[11px] font-technical text-zinc-500">
+                Prioritized by Cadre Relevance
+              </div>
             </div>
 
-            <div className="p-5 border border-zinc-200 bg-[#FAFAFA] relative">
-              <span className="text-[11px] font-technical text-amber-600 font-bold block mb-1">STEP 4</span>
-              <h4 className="text-sm font-bold text-zinc-950 mb-1.5 font-heading">Skill Passport</h4>
-              <p className="text-xs text-zinc-600">
-                Issues a cryptographic digital competency identity reflecting verified field readiness.
-              </p>
+            {/* Step 04 */}
+            <div className="terminal-card p-5 rounded-xl border border-zinc-200/90 bg-white flex flex-col justify-between shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-technical text-amber-800 font-bold">04 LEARN</span>
+                  <span className="w-2 h-2 rounded-full bg-zinc-300" />
+                </div>
+                <h4 className="text-sm font-bold text-zinc-950 mb-1.5 font-heading">Targeted Curriculum</h4>
+                <p className="text-xs text-zinc-600 leading-relaxed">
+                  Recommend relevant iGOT Karmayogi and NSSTA learning.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-zinc-100 text-[11px] font-technical text-zinc-500">
+                Official Government Catalogues
+              </div>
+            </div>
+
+            {/* Step 05 */}
+            <div className="terminal-card p-5 rounded-xl border border-zinc-200/90 bg-white flex flex-col justify-between shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-technical text-amber-800 font-bold">05 VERIFY</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-subtle-pulse" />
+                </div>
+                <h4 className="text-sm font-bold text-zinc-950 mb-1.5 font-heading">Source-Grounded Quizzes</h4>
+                <p className="text-xs text-zinc-600 leading-relaxed">
+                  Generate grounded quizzes from training material and update competency evidence.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-zinc-100 text-[11px] font-technical text-zinc-500">
+                Trainer Human-in-the-Loop Review
+              </div>
+            </div>
+
+            {/* Step 06 */}
+            <div className="terminal-card p-5 rounded-xl border border-zinc-200/90 bg-white flex flex-col justify-between shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-technical text-amber-800 font-bold">06 TRACK</span>
+                  <span className="w-2 h-2 rounded-full bg-zinc-300" />
+                </div>
+                <h4 className="text-sm font-bold text-zinc-950 mb-1.5 font-heading">Living Skill Passport</h4>
+                <p className="text-xs text-zinc-600 leading-relaxed">
+                  Maintain a living Skill Passport and readiness view.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-zinc-100 text-[11px] font-technical text-zinc-500">
+                Decay Projections &amp; Readiness
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Section: Core Intelligence */}
-      <section className="py-16 px-6 sm:px-12 lg:px-24 border-b border-zinc-200 bg-[#FAF9F7]">
+      {/* 4. Core Intelligence Section */}
+      <section className="py-16 sm:py-20 px-5 sm:px-10 lg:px-20 border-b border-zinc-200/90 bg-[#FAF9F7]">
         <div className="max-w-5xl mx-auto">
           <div className="flex items-center gap-2 text-xs font-technical uppercase text-amber-800 font-bold tracking-wider mb-2">
             <span>[SECTION 03]</span>
             <span>CORE INTELLIGENCE</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold text-zinc-950 font-heading mb-8">
-            Engineered Specifically for Official Statistics
+            Where the AI makes a difference
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="p-6 bg-white border border-zinc-300">
-              <div className="flex items-center gap-3 mb-3">
-                <Brain className="w-5 h-5 text-amber-600" />
-                <h3 className="text-base font-bold text-zinc-950 font-heading">
-                  AI Readiness Projection (Decay Timeline)
-                </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Card 1: AI Readiness Projection */}
+            <div className="terminal-card p-6 bg-white rounded-xl border border-zinc-200/90 flex flex-col justify-between shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-amber-50 rounded-lg border border-amber-200/80">
+                      <TrendingDown className="w-4 h-4 text-amber-700" />
+                    </div>
+                    <h3 className="text-base font-bold text-zinc-950 font-heading">
+                      AI Readiness Projection
+                    </h3>
+                  </div>
+                  <span className="text-[10px] font-technical text-zinc-400 font-bold">[ENGINE_DECAY]</span>
+                </div>
+                <p className="text-xs text-zinc-600 leading-relaxed mb-4">
+                  Estimate which verified skills may become at risk over time and surface timely refresher recommendations.
+                </p>
               </div>
-              <p className="text-xs text-zinc-600 leading-relaxed mb-4">
-                Instead of static certification expiry, the decay model tracks elapsed days since last verified assessment, 
-                changes in ministry guidelines (e.g., PLFS stratification revisions), and field deployment frequency.
-              </p>
-              <div className="p-3 bg-zinc-50 border border-zinc-200 text-xs font-technical text-zinc-700">
-                NOW: 82% → 3 MOS: 76% → 6 MOS: 68% (AT RISK)
+              <div className="p-3 bg-[#FAF9F7] rounded-lg border border-zinc-200 text-[11px] font-technical text-zinc-700 flex items-center justify-between">
+                <span>RETENTION: 82% &rarr; 6 MOS: 68%</span>
+                <span className="text-amber-800 font-semibold">[PROJECTED RISK]</span>
               </div>
             </div>
 
-            <div className="p-6 bg-white border border-zinc-300">
-              <div className="flex items-center gap-3 mb-3">
-                <FileCheck2 className="w-5 h-5 text-amber-600" />
-                <h3 className="text-base font-bold text-zinc-950 font-heading">
-                  Source & Page-Level Curricular Grounding
-                </h3>
+            {/* Card 2: Grounded AI Assessments */}
+            <div className="terminal-card p-6 bg-white rounded-xl border border-zinc-200/90 flex flex-col justify-between shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-amber-50 rounded-lg border border-amber-200/80">
+                      <FileCheck2 className="w-4 h-4 text-amber-700" />
+                    </div>
+                    <h3 className="text-base font-bold text-zinc-950 font-heading">
+                      Grounded AI Assessments
+                    </h3>
+                  </div>
+                  <span className="text-[10px] font-technical text-zinc-400 font-bold">[ENGINE_QUIZ]</span>
+                </div>
+                <p className="text-xs text-zinc-600 leading-relaxed mb-4">
+                  Generate questions from uploaded training material with source and page-level evidence.
+                </p>
               </div>
-              <p className="text-xs text-zinc-600 leading-relaxed mb-4">
-                Every assessment generated by trainers cites the exact manual name, page number, and paragraph excerpt. 
-                When an officer errs, the explanation immediately offers a direct link to the authoritative government document.
-              </p>
-              <div className="p-3 bg-zinc-50 border border-zinc-200 text-xs font-technical text-zinc-700">
-                SOURCE: NSSTA Sampling Manual Vol IV, Page 14, Section 3.2
+              <div className="p-3 bg-[#FAF9F7] rounded-lg border border-zinc-200 text-[11px] font-technical text-zinc-700 flex items-center justify-between">
+                <span>EVIDENCE: NSSO Manual Vol IV, P.14</span>
+                <span className="text-emerald-800 font-semibold">[CITED]</span>
+              </div>
+            </div>
+
+            {/* Card 3: Next Best Skill */}
+            <div className="terminal-card p-6 bg-white rounded-xl border border-zinc-200/90 flex flex-col justify-between shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-amber-50 rounded-lg border border-amber-200/80">
+                      <Target className="w-4 h-4 text-amber-700" />
+                    </div>
+                    <h3 className="text-base font-bold text-zinc-950 font-heading">
+                      Next Best Skill
+                    </h3>
+                  </div>
+                  <span className="text-[10px] font-technical text-zinc-400 font-bold">[ENGINE_RECOMMEND]</span>
+                </div>
+                <p className="text-xs text-zinc-600 leading-relaxed mb-4">
+                  Prioritize the single most relevant skill an officer should learn next based on role, gaps, learning history and risk.
+                </p>
+              </div>
+              <div className="p-3 bg-[#FAF9F7] rounded-lg border border-zinc-200 text-[11px] font-technical text-zinc-700 flex items-center justify-between">
+                <span>ACTION: High-Impact Gap Prioritization</span>
+                <span className="text-blue-800 font-semibold">[RANKED]</span>
+              </div>
+            </div>
+
+            {/* Card 4: Competency-Aware Assistant */}
+            <div className="terminal-card p-6 bg-white rounded-xl border border-zinc-200/90 flex flex-col justify-between shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-amber-50 rounded-lg border border-amber-200/80">
+                      <MessageSquare className="w-4 h-4 text-amber-700" />
+                    </div>
+                    <h3 className="text-base font-bold text-zinc-950 font-heading">
+                      Competency-Aware Assistant
+                    </h3>
+                  </div>
+                  <span className="text-[10px] font-technical text-zinc-400 font-bold">[ENGINE_CHAT]</span>
+                </div>
+                <p className="text-xs text-zinc-600 leading-relaxed mb-4">
+                  Answer learning questions using the officer's role, competencies and approved learning material as context.
+                </p>
+              </div>
+              <div className="p-3 bg-[#FAF9F7] rounded-lg border border-zinc-200 text-[11px] font-technical text-zinc-700 flex items-center justify-between">
+                <span>CONTEXT: Official MoSPI Operational Rubrics</span>
+                <span className="text-zinc-800 font-semibold">[ACTIVE]</span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Section: Three Stakeholder Perspectives */}
-      <section className="py-16 px-6 sm:px-12 lg:px-24 border-b border-zinc-200 bg-white">
+      {/* 5. Stakeholder Perspectives Section */}
+      <section className="py-16 sm:py-20 px-5 sm:px-10 lg:px-20 border-b border-zinc-200/90 bg-white">
         <div className="max-w-5xl mx-auto">
           <div className="flex items-center gap-2 text-xs font-technical uppercase text-amber-800 font-bold tracking-wider mb-2">
             <span>[SECTION 04]</span>
@@ -249,134 +500,162 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* For Officers */}
-            <div className="p-6 border border-zinc-300 flex flex-col justify-between hover:border-zinc-900 transition-colors">
+            <div className="terminal-card p-6 rounded-xl border border-zinc-200/90 bg-white flex flex-col justify-between shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
               <div>
-                <span className="text-[10px] font-technical uppercase text-amber-700 font-bold px-2 py-0.5 bg-amber-50 border border-amber-200 inline-block mb-3">
-                  FOR OFFICERS
-                </span>
-                <h3 className="text-lg font-bold text-zinc-950 font-heading mb-2">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] font-technical uppercase text-amber-800 font-bold px-2 py-0.5 bg-amber-50 border border-amber-200/80 rounded">
+                    OFFICERS
+                  </span>
+                  <span className="text-[10px] font-technical text-zinc-400">JSO / SSO / ISS</span>
+                </div>
+                <h3 className="text-base font-bold text-zinc-950 font-heading mb-2">
                   Personal Competency Trajectory
                 </h3>
-                <p className="text-xs text-zinc-600 leading-relaxed mb-4">
-                  Understand your exact gap deltas, combat skill decay with targeted refreshers, earn verified badges, 
-                  and maintain a portable Digital Skill Passport for postings and deputations.
+                <p className="text-xs text-zinc-600 leading-relaxed mb-6">
+                  See your competency gaps, learning path, progress and verified skills.
                 </p>
               </div>
               <button
+                id="landing-open-officer-btn"
                 onClick={() => onSelectRole('officer')}
-                className="w-full py-2 bg-zinc-900 hover:bg-black text-white text-xs font-technical uppercase tracking-wider font-semibold transition-colors flex items-center justify-center gap-2"
+                className="w-full py-2.5 bg-zinc-900 hover:bg-black text-white text-xs font-technical uppercase tracking-wider font-semibold rounded-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer group"
               >
-                <span>Launch Officer Suite</span>
-                <ArrowRight className="w-3.5 h-3.5 text-amber-400" />
+                <span>OPEN OFFICER VIEW</span>
+                <ArrowRight className="w-3.5 h-3.5 text-amber-400 group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
 
             {/* For Trainers */}
-            <div className="p-6 border border-zinc-300 flex flex-col justify-between hover:border-zinc-900 transition-colors">
+            <div className="terminal-card p-6 rounded-xl border border-zinc-200/90 bg-white flex flex-col justify-between shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
               <div>
-                <span className="text-[10px] font-technical uppercase text-amber-700 font-bold px-2 py-0.5 bg-amber-50 border border-amber-200 inline-block mb-3">
-                  FOR TRAINERS
-                </span>
-                <h3 className="text-lg font-bold text-zinc-950 font-heading mb-2">
-                  AI Quiz & Content Engine
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] font-technical uppercase text-amber-800 font-bold px-2 py-0.5 bg-amber-50 border border-amber-200/80 rounded">
+                    TRAINERS
+                  </span>
+                  <span className="text-[10px] font-technical text-zinc-400">NSSTA / FACULTY</span>
+                </div>
+                <h3 className="text-base font-bold text-zinc-950 font-heading mb-2">
+                  Grounded Quiz &amp; Verification
                 </h3>
-                <p className="text-xs text-zinc-600 leading-relaxed mb-4">
-                  Upload raw training PDFs, presentations, or survey manuals. Skill Sutra ingests, structures, 
-                  and creates rigorous, page-cited MCQs with instant reviewer validation controls.
+                <p className="text-xs text-zinc-600 leading-relaxed mb-6">
+                  Turn training material into source-grounded quizzes and review them before publishing.
                 </p>
               </div>
               <button
+                id="landing-open-trainer-btn"
                 onClick={() => onSelectRole('trainer')}
-                className="w-full py-2 bg-zinc-900 hover:bg-black text-white text-xs font-technical uppercase tracking-wider font-semibold transition-colors flex items-center justify-center gap-2"
+                className="w-full py-2.5 bg-zinc-900 hover:bg-black text-white text-xs font-technical uppercase tracking-wider font-semibold rounded-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer group"
               >
-                <span>Launch Trainer Suite</span>
-                <ArrowRight className="w-3.5 h-3.5 text-amber-400" />
+                <span>OPEN TRAINER VIEW</span>
+                <ArrowRight className="w-3.5 h-3.5 text-amber-400 group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
 
             {/* For Administrators */}
-            <div className="p-6 border border-zinc-300 flex flex-col justify-between hover:border-zinc-900 transition-colors">
+            <div className="terminal-card p-6 rounded-xl border border-zinc-200/90 bg-white flex flex-col justify-between shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
               <div>
-                <span className="text-[10px] font-technical uppercase text-amber-700 font-bold px-2 py-0.5 bg-amber-50 border border-amber-200 inline-block mb-3">
-                  FOR ADMINISTRATORS
-                </span>
-                <h3 className="text-lg font-bold text-zinc-950 font-heading mb-2">
-                  Workforce & Regional Intelligence
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] font-technical uppercase text-amber-800 font-bold px-2 py-0.5 bg-amber-50 border border-amber-200/80 rounded">
+                    ADMINISTRATORS
+                  </span>
+                  <span className="text-[10px] font-technical text-zinc-400">MoSPI / STATE DES</span>
+                </div>
+                <h3 className="text-base font-bold text-zinc-950 font-heading mb-2">
+                  Workforce &amp; Cadre Intelligence
                 </h3>
-                <p className="text-xs text-zinc-600 leading-relaxed mb-4">
-                  Macro-level heatmaps across all 6 Indian statistical zones, future readiness forecasts for AI/ML and GIS, 
-                  and actionable insights for annual training calendar formulation.
+                <p className="text-xs text-zinc-600 leading-relaxed mb-6">
+                  See competency gaps, readiness and training needs across departments and cadres.
                 </p>
               </div>
               <button
+                id="landing-open-admin-btn"
                 onClick={() => onSelectRole('admin')}
-                className="w-full py-2 bg-zinc-900 hover:bg-black text-white text-xs font-technical uppercase tracking-wider font-semibold transition-colors flex items-center justify-center gap-2"
+                className="w-full py-2.5 bg-zinc-900 hover:bg-black text-white text-xs font-technical uppercase tracking-wider font-semibold rounded-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer group"
               >
-                <span>Launch Admin Suite</span>
-                <ArrowRight className="w-3.5 h-3.5 text-amber-400" />
+                <span>OPEN ADMIN VIEW</span>
+                <ArrowRight className="w-3.5 h-3.5 text-amber-400 group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Section: Impact */}
-      <section className="py-16 px-6 sm:px-12 lg:px-24 bg-[#FAF9F7] border-b border-zinc-200">
+      {/* 6. Impact / Architectural Alignment Section */}
+      <section className="py-16 sm:py-20 px-5 sm:px-10 lg:px-20 bg-[#FAF9F7] border-b border-zinc-200/90">
         <div className="max-w-5xl mx-auto">
           <div className="flex items-center gap-2 text-xs font-technical uppercase text-amber-800 font-bold tracking-wider mb-2">
             <span>[SECTION 05]</span>
-            <span>MEASURABLE IMPACT</span>
+            <span>READINESS ARCHITECTURE</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold text-zinc-950 font-heading mb-8">
-            National Statistical Capacity Transformation
+            From Individual Learning to Workforce Readiness
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <div className="p-6 bg-white border border-zinc-300">
-              <div className="text-3xl font-bold text-zinc-950 font-heading mb-1">42%</div>
-              <div className="text-xs font-technical text-amber-700 font-bold uppercase mb-2">
-                Drop in Sampling Discrepancies
+            <div className="terminal-card p-6 bg-white rounded-xl border border-zinc-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold font-technical text-amber-800 uppercase tracking-wider">
+                  ONE PROFILE
+                </span>
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-subtle-pulse" />
               </div>
+              <h3 className="text-base font-bold text-zinc-950 font-heading mb-2">
+                Role + domain + competency context
+              </h3>
               <p className="text-xs text-zinc-600 leading-relaxed">
-                By catching stratified sampling formula decay before field deployment in PLFS and Annual Survey of Industries.
+                Connects designation, posting, survey domain, and training history into an operational competency baseline.
               </p>
             </div>
 
-            <div className="p-6 bg-white border border-zinc-300">
-              <div className="text-3xl font-bold text-zinc-950 font-heading mb-1">4.5x</div>
-              <div className="text-xs font-technical text-amber-700 font-bold uppercase mb-2">
-                Faster Quiz Authoring for NSSTA
+            <div className="terminal-card p-6 bg-white rounded-xl border border-zinc-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold font-technical text-amber-800 uppercase tracking-wider">
+                  ONE LEARNING LOOP
+                </span>
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-subtle-pulse" />
               </div>
+              <h3 className="text-base font-bold text-zinc-950 font-heading mb-2">
+                Assess &rarr; Learn &rarr; Verify &rarr; Update
+              </h3>
               <p className="text-xs text-zinc-600 leading-relaxed">
-                Automated document extraction and validation cuts faculty assessment preparation time from 2 days to 20 minutes.
+                Seamless progression from diagnostic assessment to relevant iGOT/NSSTA curriculum and verified evaluation.
               </p>
             </div>
 
-            <div className="p-6 bg-white border border-zinc-300">
-              <div className="text-3xl font-bold text-zinc-950 font-heading mb-1">100%</div>
-              <div className="text-xs font-technical text-amber-700 font-bold uppercase mb-2">
-                Verifiable Competency Proof
+            <div className="terminal-card p-6 bg-white rounded-xl border border-zinc-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold font-technical text-amber-800 uppercase tracking-wider">
+                  ONE WORKFORCE VIEW
+                </span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-subtle-pulse" />
               </div>
+              <h3 className="text-base font-bold text-zinc-950 font-heading mb-2">
+                Individual competency &rarr; organisational readiness
+              </h3>
               <p className="text-xs text-zinc-600 leading-relaxed">
-                Eliminates unverified self-appraisals; every passport entry is backed by an NSSTA or iGOT evaluation record.
+                Aggregates verified skills across divisions to give administrators real-time visibility into statistical capacity.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-zinc-950 text-white py-12 px-6 sm:px-12 lg:px-24 mt-auto">
+      {/* 7. Footer */}
+      <footer className="bg-zinc-950 text-white py-12 px-5 sm:px-10 lg:px-20 mt-auto">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-b border-zinc-800 pb-8 mb-8">
           <BrandMark size="md" showTagline={true} inverted={true} />
           <div className="text-xs font-technical text-zinc-400 text-left md:text-right">
-            <div>DEVELOPED FOR SMART INDIA HACKATHON 2024–2026</div>
-            <div className="text-amber-400 font-medium mt-1">Official Statistical System Intelligence Architecture</div>
+            <div className="font-semibold text-zinc-300 tracking-wide">
+              AI-ENABLED COMPETENCY INTELLIGENCE FOR INDIA'S OFFICIAL STATISTICAL SYSTEM
+            </div>
+            <div className="text-amber-400 font-medium mt-1">
+              Aligned with MoSPI Framework &amp; iGOT Karmayogi / NSSTA Standards
+            </div>
           </div>
         </div>
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between text-[11px] font-technical text-zinc-500 gap-4">
-          <span>PROTOTYPE DEMONSTRATION · ALL STATISTICAL DATASETS FICTIONALIZED FOR EVALUATION</span>
-          <span>COMPATIBLE WITH iGOT KARMAYOGI & NSSTA TPAC PROTOCOLS</span>
+          <span>Ministry of Statistics and Programme Implementation (MoSPI) &amp; National Statistical Systems Training Academy (NSSTA).</span>
+          <span className="font-technical text-zinc-400">COMPATIBLE WITH iGOT KARMAYOGI &amp; NSSTA TPAC PROTOCOLS</span>
         </div>
       </footer>
     </div>

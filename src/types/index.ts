@@ -5,6 +5,8 @@ export type CompetencyDomain = 'Statistical' | 'Technical' | 'Digital Governance
 
 export type VerificationType = 'SELF-ASSESSED' | 'SYSTEM-VERIFIED';
 
+export type VerificationStatus = 'SELF-ASSESSED' | 'DIAGNOSTIC' | 'VERIFIED';
+
 export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
 export interface CompetencyItem {
@@ -14,7 +16,16 @@ export interface CompetencyItem {
   currentScore: number;
   targetScore: number;
   verification: VerificationType;
+  verificationStatus?: VerificationStatus;
+  selfAssessedScore?: number;
+  diagnosticScore?: number;
+  quizScore?: number;
+  verifiedScore?: number;
+  confidence?: 'LOW' | 'MEDIUM' | 'HIGH';
   evidence: string;
+  category?: 'REQUIRED' | 'ADDITIONAL';
+  isRequired?: boolean;
+  statisticalDomain?: string;
   decayRisk?: {
     isAtRisk: boolean;
     projected3m: number;
@@ -25,6 +36,20 @@ export interface CompetencyItem {
     refresherTitle: string;
     decayReason: string;
   };
+}
+
+export interface NextBestSkillRecommendation {
+  skillName: string;
+  competencyDomain: CompetencyDomain;
+  statisticalDomain: string;
+  currentScore: number;
+  targetScore: number;
+  gapSize: number;
+  priority: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+  isDecayRisk: boolean;
+  recommendedCourse: Course;
+  recommendationReason: string;
+  actionPathway: string;
 }
 
 export interface Course {
@@ -70,6 +95,13 @@ export interface OfficerProfile {
   passportIssuedDate: string;
   verifiedCredentialsCount: number;
   isProfileSetup?: boolean;
+  governanceLevel?: 'Central Government' | 'State Government' | 'Union Territory';
+  organization?: string;
+  statisticalDomain?: string;
+  selectedSkills?: string[];
+  trainingOrg?: string;
+  responsibilities?: string;
+  previousTraining?: string;
 }
 
 export interface QuizQuestion {

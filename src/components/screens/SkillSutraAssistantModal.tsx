@@ -294,11 +294,13 @@ export const SkillSutraAssistantModal: React.FC<SkillSutraAssistantModalProps> =
               <div
                 className={`max-w-[95%] sm:max-w-[85%] p-3.5 sm:p-4 text-xs sm:text-sm leading-relaxed border ${
                   m.sender === 'user'
-                    ? 'bg-zinc-950 text-white border-zinc-950'
+                    ? 'bg-zinc-950 text-white border-zinc-950 shadow-sm'
                     : 'bg-white text-zinc-900 border-zinc-300 shadow-xs'
                 }`}
               >
-                <div className="text-zinc-900">{renderFormattedText(m.text)}</div>
+                <div className={m.sender === 'user' ? 'text-white' : 'text-zinc-900'}>
+                  {renderFormattedText(m.text)}
+                </div>
 
                 {/* Structured Metric Callout if present */}
                 {m.highlightData && (
@@ -390,7 +392,7 @@ export const SkillSutraAssistantModal: React.FC<SkillSutraAssistantModalProps> =
             onChange={(e) => setInputQuery(e.target.value)}
             disabled={isLoading}
             placeholder="Ask anything (in English or Hindi: e.g. Sampling guide, course recommendation, profile setup)..."
-            className="flex-1 bg-white border border-zinc-400 px-3 sm:px-4 py-2 text-xs sm:text-sm text-zinc-900 focus:outline-none focus:border-zinc-900 placeholder:text-zinc-500 font-sans disabled:bg-zinc-50"
+            className="flex-1 bg-white border-2 border-zinc-400 px-3 sm:px-4 py-2 text-xs sm:text-sm text-zinc-950 font-medium focus:outline-none focus:border-zinc-950 placeholder:text-zinc-500 font-sans disabled:bg-zinc-50 shadow-inner"
           />
           <button
             type="submit"

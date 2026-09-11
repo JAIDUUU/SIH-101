@@ -5,7 +5,6 @@ import { ApiClient } from './services/apiClient';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { SkillSutraAssistantModal } from './components/screens/SkillSutraAssistantModal';
-import { User, GraduationCap, Shield, Lock, LogOut, KeyRound, LogIn } from 'lucide-react';
 
 // Views
 import { LandingPageView } from './components/screens/LandingPageView';
@@ -149,7 +148,7 @@ export default function App() {
   // Handler on successful Login or Account Creation
   const handleLoginSuccess = (
     role: UserRole,
-    user?: { name: string; designation?: string; email?: string }
+    user?: { name: string; designation?: string; email?: string; isProfileSetup?: boolean }
   ) => {
     setIsAuthenticated(true);
     setAuthenticatedRole(role);
@@ -166,17 +165,45 @@ export default function App() {
       console.warn('Could not save session to localStorage:', e);
     }
 
-    if (user && user.name) {
-      setOfficerProfile((prev) => ({
-        ...prev,
-        name: user.name,
-        designation: user.designation || prev.designation,
-      }));
+    const isSetup = user?.isProfileSetup ?? (user?.email === 'rajesh.kumar@mospi.gov.in');
+
+    if (role === 'officer') {
+      if (!isSetup) {
+        // Reset to unconfigured officer state
+        setOfficerProfile((prev) => ({
+          ...prev,
+          name: user?.name || prev.name,
+          email: user?.email || prev.email,
+          isProfileSetup: false,
+          readinessScore: 0,
+          domainScores: {
+            'Statistical': 0,
+            'Technical': 0,
+            'Digital Governance': 0,
+            'Behavioural & Managerial': 0,
+          },
+          atRiskSkills: [],
+          completedCoursesCount: 0,
+          assessmentsCompleted: 0,
+          verifiedCredentialsCount: 0,
+          activeCourses: [],
+          competencies: [],
+        }));
+      } else {
+        if (user && user.name) {
+          setOfficerProfile((prev) => ({
+            ...prev,
+            name: user.name,
+            email: user.email || prev.email,
+            designation: user.designation || prev.designation,
+          }));
+        }
+      }
     }
 
     const targetView =
       role === 'officer'
-        ? 'officer-dashboard'
+        ? (!isSetup ? 'profile-setup' : 'officer-dashboard')
         : role === 'trainer'
         ? 'trainer-dashboard'
         : 'admin-workforce';
@@ -271,10 +298,11 @@ export default function App() {
   // Handler for Profile Onboarding Complete
   const handleProfileSetupComplete = (data: any) => {
     if (data && data.name && data.competencies) {
-      setOfficerProfile(data);
+      setOfficerProfile({ ...data, isProfileSetup: true });
     } else {
       setOfficerProfile((prev) => ({
         ...prev,
+        isProfileSetup: true,
         name: data?.fullName || prev.name,
         designation: data?.designation || prev.designation,
         cadre: data?.cadre || prev.cadre,
@@ -284,6 +312,9 @@ export default function App() {
       }));
     }
     setActiveView('officer-dashboard');
+    try {
+      localStorage.setItem(SESSION_STORAGE_KEYS.ACTIVE_VIEW, 'officer-dashboard');
+    } catch {}
   };
 
   // Handler for Publishing Quiz in Trainer View
@@ -489,122 +520,6 @@ export default function App() {
           </main>
         </div>
       )}
-
-      {/* Bottom Pinned Role Switcher Bar (Enforces Authentication & Credentials) */}
-      <aside aria-label="Role Switcher" className="fixed bottom-0 left-0 right-0 z-40 bg-zinc-950 text-white border-t border-zinc-800 px-4 py-2 flex flex-wrap items-center justify-between gap-3 shadow-2xl">
-        <div className="flex items-center gap-3">
-          <span className="text-[10px] font-technical uppercase tracking-widest text-amber-400 font-bold">
-            {isAuthenticated ? 'AUTHENTICATED CADRE:' : 'CADRE ACCESS GATEWAY:'}
-          </span>
-          <span className="text-xs text-zinc-300 font-sans hidden sm:inline">
-            {isAuthenticated
-              ? `Active Session: ${authenticatedRole?.toUpperCase()} (${authenticatedRole === 'officer' ? officerProfile.name : authenticatedRole === 'trainer' ? 'Dr. S. Rao' : 'Neeta Sharma'})`
-              : 'Authentication & verification required to enter official suites'}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2 font-technical text-xs">
-          <span className="text-[10px] uppercase font-bold text-zinc-400 mr-1 hidden sm:inline">
-            ROLE:
-          </span>
-
-          {/* Officer button */}
-          <button
-            onClick={() => handleRoleChange('officer')}
-            className={`flex items-center gap-1.5 px-3 py-1 text-xs uppercase tracking-wider transition-all cursor-pointer border ${
-              isAuthenticated && authenticatedRole === 'officer' && activeView !== 'landing' && activeView !== 'login'
-                ? 'bg-amber-400 text-zinc-950 border-amber-400 font-bold'
-                : 'text-zinc-300 border-zinc-700 hover:bg-zinc-800 hover:text-white'
-            }`}
-            title={isAuthenticated && authenticatedRole === 'officer' ? 'Officer Suite Active' : 'Requires Officer Login / Registration'}
-          >
-            <User className="w-3.5 h-3.5" />
-            <span>Officer</span>
-            {(!isAuthenticated || authenticatedRole !== 'officer') && (
-              <Lock className="w-3 h-3 text-zinc-400" />
-            )}
-          </button>
-
-          {/* Trainer button */}
-          <button
-            onClick={() => handleRoleChange('trainer')}
-            className={`flex items-center gap-1.5 px-3 py-1 text-xs uppercase tracking-wider transition-all cursor-pointer border ${
-              isAuthenticated && authenticatedRole === 'trainer' && activeView !== 'landing' && activeView !== 'login'
-                ? 'bg-amber-400 text-zinc-950 border-amber-400 font-bold'
-                : 'text-zinc-300 border-zinc-700 hover:bg-zinc-800 hover:text-white'
-            }`}
-            title={isAuthenticated && authenticatedRole === 'trainer' ? 'Trainer Suite Active' : 'Requires Trainer ID & Password'}
-          >
-            <GraduationCap className="w-3.5 h-3.5" />
-            <span>Trainer</span>
-            {(!isAuthenticated || authenticatedRole !== 'trainer') && (
-              <Lock className="w-3 h-3 text-zinc-400" />
-            )}
-          </button>
-
-          {/* Admin button */}
-          <button
-            onClick={() => handleRoleChange('admin')}
-            className={`flex items-center gap-1.5 px-3 py-1 text-xs uppercase tracking-wider transition-all cursor-pointer border ${
-              isAuthenticated && authenticatedRole === 'admin' && activeView !== 'landing' && activeView !== 'login'
-                ? 'bg-amber-400 text-zinc-950 border-amber-400 font-bold'
-                : 'text-zinc-300 border-zinc-700 hover:bg-zinc-800 hover:text-white'
-            }`}
-            title={isAuthenticated && authenticatedRole === 'admin' ? 'Admin Suite Active' : 'Requires Administrative Credentials'}
-          >
-            <Shield className="w-3.5 h-3.5" />
-            <span>Admin</span>
-            {(!isAuthenticated || authenticatedRole !== 'admin') && (
-              <Lock className="w-3 h-3 text-zinc-400" />
-            )}
-          </button>
-
-          {/* Bottom quick session action */}
-          {isAuthenticated ? (
-            <button
-              onClick={handleLogout}
-              className="ml-2 flex items-center gap-1 px-2.5 py-1 text-xs uppercase tracking-wider text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-600 transition-colors cursor-pointer"
-              title="Sign Out of Session"
-            >
-              <LogOut className="w-3 h-3" />
-              <span className="hidden sm:inline">Logout</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => handleGoToLogin('officer', 'signin')}
-              className="ml-2 flex items-center gap-1 px-2.5 py-1 text-xs uppercase tracking-wider text-amber-400 hover:text-amber-300 border border-amber-500/50 hover:border-amber-400 transition-colors cursor-pointer font-bold"
-            >
-              <LogIn className="w-3 h-3" />
-              <span>Sign In</span>
-            </button>
-          )}
-        </div>
-      </aside>
-
-      {/* Global Technical Footer */}
-      <footer className="border-t border-zinc-300 bg-white py-6 px-6 sm:px-12 mt-12 mb-12 text-zinc-500 font-technical text-xs">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div>
-            <span className="font-bold text-zinc-900">SKILL SUTRA</span> · AI-Enabled Skill Intelligence & Learning Platform for India's Official Statistical System.
-            <div className="text-[11px] text-zinc-400 mt-0.5">
-              Strictly fictional demonstration dataset synthesized for academic evaluation. Not affiliated with real live government databases.
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 text-[11px]">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-300 font-mono text-[10px]">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              Supabase Connected: pqynnzeyphgwpwctvcjw
-            </span>
-            <span>•</span>
-            <span className="text-zinc-600">iGOT Karmayogi Compliant</span>
-            <span>•</span>
-            <span className="text-zinc-600">NSSTA Standard V4</span>
-            <span>•</span>
-            <span className="text-zinc-600">MoSPI 2026–2030 Roadmap</span>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

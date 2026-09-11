@@ -10,6 +10,7 @@ import { GroqService } from './groqService.ts';
 import { SupabaseSync } from './supabaseSync.ts';
 import { OfficialCoursesService, OFFICIAL_GOV_COURSES } from './officialCoursesService.ts';
 import { getSupabase, testSupabaseConnection } from './supabaseClient.ts';
+import { SunbirdRCAdapter, ESankhyikiRAGAdapter } from './externalAdapters.ts';
 
 const router = Router();
 const recommendationEngine = new RecommendationEngine();
@@ -22,6 +23,44 @@ router.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     engine: 'FastAPI/Express Full-Stack Architecture'
   });
+});
+
+// ==========================================
+// MASTER DATA (India-wide Official Statistical System)
+// ==========================================
+router.get('/master-data', (req, res) => {
+  res.json({
+    success: true,
+    data: db.masterData,
+  });
+});
+
+router.get('/master-data/organizations', (req, res) => {
+  const { tier, stateOrUt } = req.query;
+  let orgs = [...db.masterData.centralOrganizations, ...db.masterData.stateOrganizations];
+  if (tier) {
+    orgs = orgs.filter((o) => o.tier.toLowerCase() === String(tier).toLowerCase());
+  }
+  if (stateOrUt) {
+    orgs = orgs.filter((o) => o.stateOrUt?.toLowerCase() === String(stateOrUt).toLowerCase());
+  }
+  res.json({ success: true, count: orgs.length, organizations: orgs });
+});
+
+router.get('/master-data/designations', (req, res) => {
+  res.json({ success: true, count: db.masterData.designations.length, designations: db.masterData.designations });
+});
+
+router.get('/master-data/domains', (req, res) => {
+  res.json({ success: true, count: db.masterData.domains.length, domains: db.masterData.domains });
+});
+
+router.get('/master-data/competencies', (req, res) => {
+  res.json({ success: true, count: db.masterData.technicalCompetencies.length, competencies: db.masterData.technicalCompetencies });
+});
+
+router.get('/master-data/training-organizations', (req, res) => {
+  res.json({ success: true, count: db.masterData.trainingOrganizations.length, trainingOrganizations: db.masterData.trainingOrganizations });
 });
 
 // Supabase Connection Status
@@ -93,42 +132,73 @@ router.post('/supabase/seed', async (req, res) => {
 router.post('/auth/login', (req, res) => {
   const { email, password, role = 'officer' } = req.body;
   const normalizedEmail = (email || '').trim().toLowerCase();
+  const rawPassword = (password || '').trim();
 
-  // Find user by email or by role
-  const matchedUser = db.users.find((u) => u.email.toLowerCase() === normalizedEmail) ||
-    db.users.find((u) => u.role === role);
+  if (!normalizedEmail) {
+    return res.status(400).json({ error: 'Please enter your Official Email or Employee ID.' });
+  }
 
-  const derivedName = normalizedEmail.includes('@')
-    ? normalizedEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
-    : 'Officer';
+  if (!rawPassword) {
+    return res.status(400).json({ error: 'Please enter your password.' });
+  }
 
-  const user = matchedUser || {
-    id: `usr-${Date.now()}`,
-    email: email || `${role}@mospi.gov.in`,
-    role,
-    name: role === 'officer' ? derivedName : role === 'trainer' ? 'Dr. S. Rao' : 'Neeta Sharma'
-  };
+  // Find user by email or by employeeId in officer profile
+  const matchedUser = db.users.find(
+    (u) =>
+      u.email.toLowerCase() === normalizedEmail ||
+      (role === 'officer' && db.officer.employeeId?.toLowerCase() === normalizedEmail)
+  );
 
-  // If this officer is logging in with a personal/new email (not the demo Rajesh Kumar):
-  if (role === 'officer' && normalizedEmail !== 'rajesh.kumar@mospi.gov.in') {
-    if (db.officer.email !== normalizedEmail) {
-      db.officer.id = `OFF-${Date.now().toString().slice(-6)}`;
-      db.officer.name = user.name;
-      db.officer.email = normalizedEmail;
-      db.officer.isProfileSetup = false;
-      db.officer.readinessScore = 0;
-      db.officer.domainScores = {
-        'Statistical': 0,
-        'Technical': 0,
-        'Digital Governance': 0,
-        'Behavioural & Managerial': 0,
-      };
-      db.officer.atRiskSkills = [];
-      db.officer.completedCoursesCount = 0;
-      db.officer.assessmentsCompleted = 0;
-      db.officer.verifiedCredentialsCount = 0;
-      db.officer.activeCourses = [];
-      db.officer.competencies = [];
+  // User must be registered
+  if (!matchedUser) {
+    return res.status(401).json({
+      error: `No registered account found for "${email}". If you are a new officer, please click the "New Officer Registration" tab to create your account first, or use an official cadre account.`
+    });
+  }
+
+  // Validate password
+  if (matchedUser.password && matchedUser.password !== rawPassword) {
+    return res.status(401).json({
+      error: 'Invalid password. Please enter the correct password for this account.'
+    });
+  }
+
+  // Check role authorization
+  if (matchedUser.role !== role) {
+    return res.status(403).json({
+      error: `Access Denied: This account is registered under the "${matchedUser.role.toUpperCase()}" role. Please switch to the ${matchedUser.role.toUpperCase()} tab to log in.`
+    });
+  }
+
+  const user = matchedUser;
+
+  // Track profile setup state for officers
+  let officerIsSetup = true;
+  if (role === 'officer') {
+    if (normalizedEmail === 'rajesh.kumar@mospi.gov.in') {
+      officerIsSetup = true;
+      db.officer.isProfileSetup = true;
+    } else {
+      if (db.officer.email !== normalizedEmail) {
+        db.officer.id = `OFF-${Date.now().toString().slice(-6)}`;
+        db.officer.name = user.name;
+        db.officer.email = normalizedEmail;
+        db.officer.isProfileSetup = false;
+        db.officer.readinessScore = 0;
+        db.officer.domainScores = {
+          'Statistical': 0,
+          'Technical': 0,
+          'Digital Governance': 0,
+          'Behavioural & Managerial': 0,
+        };
+        db.officer.atRiskSkills = [];
+        db.officer.completedCoursesCount = 0;
+        db.officer.assessmentsCompleted = 0;
+        db.officer.verifiedCredentialsCount = 0;
+        db.officer.activeCourses = [];
+        db.officer.competencies = [];
+      }
+      officerIsSetup = db.officer.isProfileSetup;
     }
   }
 
@@ -156,7 +226,8 @@ router.post('/auth/login', (req, res) => {
       id: user.id,
       email: user.email,
       role: user.role,
-      name: user.name
+      name: user.name,
+      isProfileSetup: role === 'officer' ? db.officer.isProfileSetup : true
     },
     message: 'Session authenticated. Role verified.'
   });
@@ -266,7 +337,23 @@ router.get('/profiles/me', (req, res) => {
 });
 
 router.post('/profiles/update', (req, res) => {
-  const { fullName, designation, cadre, department, station, experienceYears, selfAssessedSkills } = req.body;
+  const {
+    fullName,
+    designation,
+    cadre,
+    department,
+    station,
+    experienceYears,
+    selfAssessedSkills,
+    governanceLevel,
+    organization,
+    statisticalDomain,
+    selectedSkills,
+    trainingOrg,
+    responsibilities,
+    previousTraining,
+    education,
+  } = req.body;
 
   if (fullName) db.officer.name = fullName;
   if (designation) db.officer.designation = designation;
@@ -274,6 +361,14 @@ router.post('/profiles/update', (req, res) => {
   if (department) db.officer.department = department;
   if (station) db.officer.station = station;
   if (experienceYears) db.officer.experienceYears = experienceYears;
+  if (governanceLevel) db.officer.governanceLevel = governanceLevel;
+  if (organization) db.officer.organization = organization;
+  if (statisticalDomain) db.officer.statisticalDomain = statisticalDomain;
+  if (selectedSkills) db.officer.selectedSkills = selectedSkills;
+  if (trainingOrg) db.officer.trainingOrg = trainingOrg;
+  if (responsibilities) db.officer.responsibilities = responsibilities;
+  if (previousTraining) db.officer.previousTraining = previousTraining;
+  if (education) db.officer.education = education;
 
   // Run Competency Engine
   const updatedComps = CompetencyEngine.evaluate({
@@ -281,10 +376,26 @@ router.post('/profiles/update', (req, res) => {
     department: db.officer.department,
     experienceYears: db.officer.experienceYears,
     cadre: db.officer.cadre,
-    selfAssessedSkills
+    organization: db.officer.organization,
+    governanceLevel: db.officer.governanceLevel,
+    statisticalDomain: db.officer.statisticalDomain,
+    selectedSkills: db.officer.selectedSkills,
+    responsibilities: db.officer.responsibilities,
+    previousTraining: db.officer.previousTraining,
+    selfAssessedSkills,
   });
 
   db.officer.competencies = updatedComps;
+  db.officer.atRiskSkills = updatedComps
+    .filter((c) => c.decayRisk?.isAtRisk)
+    .map((c) => c.name)
+    .slice(0, 3);
+  if (db.officer.atRiskSkills.length === 0) {
+    db.officer.atRiskSkills = [...updatedComps]
+      .sort((a, b) => (b.targetScore - b.currentScore) - (a.targetScore - a.currentScore))
+      .slice(0, 2)
+      .map((c) => c.name);
+  }
 
   // Recalculate domain scores
   const domainTotals: Record<string, { sum: number; count: number }> = {};
@@ -311,12 +422,12 @@ router.post('/profiles/update', (req, res) => {
     userId: 'usr-1',
     eventType: 'PROFILE_UPDATED',
     title: `Officer Profile & Competency Matrix Recalibrated (${db.officer.designation})`,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 
   res.json({
     status: 'SUCCESS',
-    officer: db.officer
+    officer: db.officer,
   });
 });
 
@@ -327,15 +438,46 @@ router.get('/competencies', (req, res) => {
   res.json(db.officer.competencies);
 });
 
+router.post('/competencies/ai-assess', async (req, res) => {
+  const {
+    competencyName,
+    competencyDomain,
+    selfAssessedScore,
+    quizPerformance,
+    evidenceNotes,
+    targetBenchmark,
+  } = req.body;
+
+  const result = await GroqService.evaluateCompetencyWithGroq({
+    officer: {
+      name: db.officer.name,
+      designation: db.officer.designation,
+      department: db.officer.department,
+      cadre: db.officer.cadre,
+      experienceYears: db.officer.experienceYears,
+      responsibilities: db.officer.responsibilities,
+      previousTraining: db.officer.previousTraining,
+    },
+    competencyName: competencyName || 'Sampling Methodology & Design',
+    competencyDomain: competencyDomain || 'Statistical',
+    selfAssessedScore,
+    quizPerformance,
+    evidenceNotes,
+    targetBenchmark: targetBenchmark || 85,
+  });
+
+  res.json(result);
+});
+
 router.get('/skills/decay', (req, res) => {
   const projections = db.officer.competencies.map((c) => {
     return SkillDecayEngine.calculate(c.name, c.currentScore);
   });
 
   res.json({
-    featureLabel: 'AI READINESS PROJECTION',
-    disclaimer: 'Algorithmic projection based on elapsed intervals & official PLFS/ASI syllabus updates. Not a scientifically certified clinical psychometric.',
-    projections
+    featureLabel: 'ESTIMATED SKILL RETENTION & RETIRED INTERVAL PROJECTION',
+    disclaimer: 'Algorithmic decay estimate based on elapsed training intervals and official syllabus revisions (PLFS / ASI). For developmental guidance, not certified clinical measurement.',
+    projections,
   });
 });
 
@@ -343,12 +485,43 @@ router.get('/skills/decay', (req, res) => {
 // 4. /api/recommendations & /api/courses
 // ==========================================
 router.get('/recommendations', async (req, res) => {
-  const recommendations = await recommendationEngine.getRankedRecommendations(
-    db.officer.competencies,
-    db.officer.atRiskSkills,
-    db.officer.experienceYears
-  );
+  const completedIds = (db.officer.activeCourses || [])
+    .filter((c) => c.status === 'completed')
+    .map((c) => c.id);
+
+  const recommendations = await recommendationEngine.getRankedRecommendations({
+    designation: db.officer.designation,
+    department: db.officer.department,
+    cadre: db.officer.cadre,
+    statisticalDomain: db.officer.statisticalDomain,
+    competencies: db.officer.competencies,
+    atRiskSkills: db.officer.atRiskSkills,
+    experienceYears: db.officer.experienceYears,
+    previousTraining: db.officer.previousTraining,
+    completedCourseIds: completedIds,
+  });
+
   res.json(recommendations);
+});
+
+router.get('/recommendations/next-best-skill', async (req, res) => {
+  const completedIds = (db.officer.activeCourses || [])
+    .filter((c) => c.status === 'completed')
+    .map((c) => c.id);
+
+  const nextBestSkill = await recommendationEngine.getNextBestSkill({
+    designation: db.officer.designation,
+    department: db.officer.department,
+    cadre: db.officer.cadre,
+    statisticalDomain: db.officer.statisticalDomain,
+    competencies: db.officer.competencies,
+    atRiskSkills: db.officer.atRiskSkills,
+    experienceYears: db.officer.experienceYears,
+    previousTraining: db.officer.previousTraining,
+    completedCourseIds: completedIds,
+  });
+
+  res.json(nextBestSkill);
 });
 
 router.get('/courses', async (req, res) => {
@@ -473,6 +646,76 @@ router.get('/quizzes/current', (req, res) => {
   res.json(db.currentQuiz);
 });
 
+router.post('/quizzes/regenerate-question', (req, res) => {
+  const { questionId, documentName, difficulty = 'Intermediate', language = 'English' } = req.body;
+  
+  const alternatives = [
+    {
+      text: 'In two-stage stratified sampling with PPS in NSSO urban frames, how is the inclusion probability adjusted when census enumeration blocks are updated?',
+      options: [
+        'By scaling selection probability inversely proportional to updated enterprise/household counts',
+        'By discarding the entire stratum and re-enumerating adjacent wards',
+        'By applying a flat 10% weighting penalty without recalculation',
+        'By substituting the updated block with the nearest rural census village'
+      ],
+      correctOptionIndex: 0,
+      explanation: 'Under Chapter 3 (Sec 3.4), inclusion probabilities are scaled using inverse probability weights proportional to updated stratum sizes to maintain unbiased Horvitz-Thompson estimators.',
+      sourceDoc: {
+        title: documentName || 'NSSO_77th_Round_Sampling_Design_Manual.pdf',
+        page: 24,
+        section: 'Section 3.4 — Stratum Weight Calibration',
+        excerpt: 'When frame updates occur during field operations, selection weights are re-scaled inversely to block size ratios.'
+      },
+      competencyDomain: 'Statistical'
+    },
+    {
+      text: 'Under PLFS guidelines for multi-member households, what consistency rule prevents double-counting of seasonal agricultural workers?',
+      options: [
+        'Mandatory verification against 30-day usual principal activity status (UPSS)',
+        'Classifying all casual laborers under self-employed code 11',
+        'Excluding household members residing outside for > 6 months',
+        'Overriding individual work days with head of household declared total'
+      ],
+      correctOptionIndex: 0,
+      explanation: 'PLFS Enumerator Handbook Chapter 2 specifies that Usual Principal Activity Status (UPSS) strictly governs labor force categorisation for all members residing at least 30 days during the reference period.',
+      sourceDoc: {
+        title: documentName || 'PLFS_Field_Enumerator_Consistency_Rules.ppt',
+        page: 18,
+        section: 'Slide 18: Usual Status Determination Rules',
+        excerpt: 'The primary activity is determined based on major time criterion spent over the preceding 365 days.'
+      },
+      competencyDomain: 'Digital Governance'
+    },
+    {
+      text: 'In CSPro / CAPI field validation for MoSPI survey schedules, which validation constraint ensures internal schedule integrity between demographic roster and consumption expenditure?',
+      options: [
+        'Relational range check linking roster count with Item 33 per-capita multiplier',
+        'Manual visual inspection by the field supervisor before tablet sync',
+        'Automatic zero-filling of skipped demographic blocks',
+        'Disabling GPS coordinate tagging during household interviews'
+      ],
+      correctOptionIndex: 0,
+      explanation: 'CSPro logic files embed hard logic checks (ERROR IF COUNT(ROSTER) != EXPENDITURE_HEAD_COUNT) preventing schedule completion until discrepancy is resolved in the field.',
+      sourceDoc: {
+        title: documentName || 'MoSPI_CAPI_Field_Validation_Guide.pdf',
+        page: 31,
+        section: 'Section 5.1 — Cross-Schedule Relational Constraints',
+        excerpt: 'CAPI applications must enforce strict relational parity between demographic rosters and consumption block multipliers.'
+      },
+      competencyDomain: 'Technical'
+    }
+  ];
+
+  const selectedAlt = alternatives[Math.floor(Math.random() * alternatives.length)];
+  const updatedQuestion = {
+    id: questionId || `q-gen-${Date.now()}`,
+    questionNumber: 1,
+    ...selectedAlt
+  };
+
+  res.json({ success: true, question: updatedQuestion });
+});
+
 router.post('/quizzes/publish', (req, res) => {
   db.currentQuiz.status = 'Published';
   res.json({ status: 'PUBLISHED', quiz: db.currentQuiz });
@@ -504,20 +747,55 @@ router.post('/assessments/submit', (req, res) => {
   // Update Officer Profile competencies based on quiz performance
   const updatedComps: Array<{ name: string; oldScore: number; newScore: number }> = [];
 
-  // Specifically boost the target domain / competencies tested
+  // Specifically update the target domain / competencies tested
   db.officer.competencies.forEach((comp) => {
-    if (comp.domain === quiz.targetDomain || comp.name.includes('Sampling')) {
+    const isTarget =
+      comp.domain === quiz.targetDomain ||
+      comp.name.toLowerCase().includes(quiz.targetDomain.toLowerCase()) ||
+      quiz.title.toLowerCase().includes(comp.name.toLowerCase()) ||
+      comp.name.toLowerCase().includes('sampling');
+
+    if (isTarget) {
       const oldScore = comp.currentScore;
-      const boost = passed ? Math.round((percentage / 100) * 8) : 2;
-      const newScore = Math.min(100, oldScore + boost);
+      const newScore = passed
+        ? Math.min(100, Math.max(oldScore, Math.round(percentage)))
+        : Math.max(oldScore, Math.round((oldScore + percentage) / 2));
+
       comp.currentScore = newScore;
+      comp.quizScore = percentage;
+      comp.verifiedScore = newScore;
       comp.verification = 'SYSTEM-VERIFIED';
-      comp.evidence = `Validated in official NSSTA drill: ${quiz.title} (Score: ${percentage}%, ${new Date().toLocaleDateString()})`;
+      comp.verificationStatus = 'VERIFIED';
+      comp.confidence = 'HIGH';
+      comp.evidence = `Validated in official NSSTA drill: "${quiz.title}" (Score: ${percentage}%, Verified ${new Date().toLocaleDateString('en-GB')})`;
+
+      // Refresh decay retention!
+      if (comp.decayRisk) {
+        comp.decayRisk.isAtRisk = false;
+        comp.decayRisk.lastAssessed = 'Today (Verified Drill)';
+        comp.decayRisk.decayReason = `Retention baseline refreshed via official NSSTA examination (${percentage}%).`;
+      }
+
       updatedComps.push({ name: comp.name, oldScore, newScore });
     }
   });
 
-  // Recalculate readiness
+  // Re-calculate at-risk skills and overall readiness
+  db.officer.atRiskSkills = db.officer.competencies
+    .filter((c) => c.decayRisk?.isAtRisk)
+    .map((c) => c.name);
+
+  // Recalculate domain scores
+  const domainTotals: Record<string, { sum: number; count: number }> = {};
+  db.officer.competencies.forEach((c) => {
+    if (!domainTotals[c.domain]) domainTotals[c.domain] = { sum: 0, count: 0 };
+    domainTotals[c.domain].sum += c.currentScore;
+    domainTotals[c.domain].count += 1;
+  });
+  Object.entries(domainTotals).forEach(([dom, { sum, count }]) => {
+    (db.officer.domainScores as any)[dom] = Math.round(sum / count);
+  });
+
   const totalScore = db.officer.competencies.reduce((acc, c) => acc + c.currentScore, 0);
   db.officer.readinessScore = Math.min(100, Math.round(totalScore / db.officer.competencies.length));
   db.officer.verifiedCredentialsCount += 1;
@@ -682,4 +960,236 @@ router.get('/admin/trainers', (req, res) => {
   });
 });
 
+// ==========================================
+// 12. AI Skill Gap Engine (Requirement 6)
+// ==========================================
+router.get('/competencies/gap-analysis', (req, res) => {
+  const targetBenchmark = req.query.benchmark ? Number(req.query.benchmark) : 80;
+  const analysis = CompetencyEngine.analyzeGaps(db.officer.competencies, targetBenchmark);
+  res.json(analysis);
+});
+
+router.post('/competencies/gap-analysis', (req, res) => {
+  const { competencies, benchmark } = req.body;
+  const targetComps = competencies || db.officer.competencies;
+  const targetBenchmark = benchmark ? Number(benchmark) : 80;
+  const analysis = CompetencyEngine.analyzeGaps(targetComps, targetBenchmark);
+  res.json(analysis);
+});
+
+// ==========================================
+// 13. Workforce Skill Heatmap & Macro Intelligence (Requirement 14)
+// ==========================================
+router.get('/analytics/workforce-heatmap', (req, res) => {
+  const { organization, department, state_ut, designation, competency } = req.query;
+
+  // India-wide Official Statistical System Heatmap Cells
+  const allCells = [
+    {
+      id: 'hm-1',
+      organization: 'MoSPI / NSO',
+      department: 'Field Operations Division (FOD)',
+      stateOrUt: 'Uttar Pradesh',
+      designation: 'Junior Statistical Officer (JSO)',
+      competency: 'Sampling Methodology & Design',
+      domain: 'Statistical',
+      averageScore: 78,
+      targetBenchmark: 85,
+      status: 'Optimal',
+      officersCount: 380,
+    },
+    {
+      id: 'hm-2',
+      organization: 'MoSPI / NSO',
+      department: 'Field Operations Division (FOD)',
+      stateOrUt: 'Uttar Pradesh',
+      designation: 'Junior Statistical Officer (JSO)',
+      competency: 'Python & Automated ETL Microdata Scripting',
+      domain: 'Technical',
+      averageScore: 42,
+      targetBenchmark: 75,
+      status: 'Critical Deficit',
+      officersCount: 380,
+    },
+    {
+      id: 'hm-3',
+      organization: 'MoSPI / NSO',
+      department: 'Field Operations Division (FOD)',
+      stateOrUt: 'Maharashtra',
+      designation: 'Senior Statistical Officer (SSO)',
+      competency: 'CSPro / CAPI Logic Verification & API Sync',
+      domain: 'Digital Governance',
+      averageScore: 84,
+      targetBenchmark: 85,
+      status: 'Optimal',
+      officersCount: 220,
+    },
+    {
+      id: 'hm-4',
+      organization: 'MoSPI / NSO',
+      department: 'Price Statistics Division (PSD)',
+      stateOrUt: 'Delhi',
+      designation: 'Statistical Officer (SO)',
+      competency: 'Price Index & Imputation Systems',
+      domain: 'Statistical',
+      averageScore: 81,
+      targetBenchmark: 85,
+      status: 'Optimal',
+      officersCount: 160,
+    },
+    {
+      id: 'hm-5',
+      organization: 'MoSPI / NSO',
+      department: 'National Accounts Division (NAD)',
+      stateOrUt: 'Delhi',
+      designation: 'Assistant / Deputy Director (ISS)',
+      competency: 'Gross Value Added (GVA) & Supply-Use Tables',
+      domain: 'Statistical',
+      averageScore: 88,
+      targetBenchmark: 90,
+      status: 'Optimal',
+      officersCount: 95,
+    },
+    {
+      id: 'hm-6',
+      organization: 'State DES',
+      department: 'State Directorate of Economics & Statistics',
+      stateOrUt: 'Karnataka',
+      designation: 'Statistical Investigator',
+      competency: 'GIS Spatial Demarcation & Geofencing (UFS)',
+      domain: 'Technical / GIS',
+      averageScore: 48,
+      targetBenchmark: 75,
+      status: 'Critical Deficit',
+      officersCount: 290,
+    },
+    {
+      id: 'hm-7',
+      organization: 'State DES',
+      department: 'State Directorate of Economics & Statistics',
+      stateOrUt: 'West Bengal',
+      designation: 'Statistical Officer (SO)',
+      competency: 'Sampling Methodology & Design',
+      domain: 'Statistical',
+      averageScore: 66,
+      targetBenchmark: 80,
+      status: 'Moderate Deficit',
+      officersCount: 210,
+    },
+    {
+      id: 'hm-8',
+      organization: 'Labour Bureau',
+      department: 'Consumer Price Index for Industrial Workers (CPI-IW)',
+      stateOrUt: 'Himachal Pradesh',
+      designation: 'Statistical Investigator',
+      competency: 'Price Index & Imputation Systems',
+      domain: 'Statistical',
+      averageScore: 86,
+      targetBenchmark: 85,
+      status: 'Optimal',
+      officersCount: 140,
+    },
+    {
+      id: 'hm-9',
+      organization: 'Ministry of Agriculture DES',
+      department: 'Agricultural Statistics Division',
+      stateOrUt: 'Madhya Pradesh',
+      designation: 'Research Officer',
+      competency: 'Agricultural Output Estimation & Crop Cutting Experiments',
+      domain: 'Statistical',
+      averageScore: 72,
+      targetBenchmark: 80,
+      status: 'Moderate Deficit',
+      officersCount: 180,
+    },
+    {
+      id: 'hm-10',
+      organization: 'MoSPI / NSO',
+      department: 'Economic Statistics Division (ESD)',
+      stateOrUt: 'West Bengal',
+      designation: 'Statistical Officer (SO)',
+      competency: 'Annual Survey of Industries (ASI) Protocols',
+      domain: 'Statistical',
+      averageScore: 79,
+      targetBenchmark: 80,
+      status: 'Optimal',
+      officersCount: 175,
+    }
+  ];
+
+  let filtered = allCells;
+  if (organization && organization !== 'ALL') {
+    filtered = filtered.filter((c) => c.organization.toLowerCase().includes(String(organization).toLowerCase()));
+  }
+  if (department && department !== 'ALL') {
+    filtered = filtered.filter((c) => c.department.toLowerCase().includes(String(department).toLowerCase()));
+  }
+  if (state_ut && state_ut !== 'ALL') {
+    filtered = filtered.filter((c) => c.stateOrUt.toLowerCase().includes(String(state_ut).toLowerCase()));
+  }
+  if (designation && designation !== 'ALL') {
+    filtered = filtered.filter((c) => c.designation.toLowerCase().includes(String(designation).toLowerCase()));
+  }
+  if (competency && competency !== 'ALL') {
+    filtered = filtered.filter((c) => c.competency.toLowerCase().includes(String(competency).toLowerCase()));
+  }
+
+  res.json({
+    appliedFilters: { organization, department, state_ut, designation, competency },
+    totalOfficersCovered: filtered.reduce((acc, c) => acc + c.officersCount, 0),
+    cells: filtered,
+    macroSummary: {
+      totalEmployeesTracked: 6420,
+      overallReadinessPercentage: 68.4,
+      trainingCompletionRate: 74.6,
+      averageQuizScore: 78.2,
+      criticalGapsCount: 4,
+      optimalCount: 18,
+    }
+  });
+});
+
+// ==========================================
+// 14. Sunbird RC Framework Integration Endpoints (Requirement 1 & Research Report)
+// ==========================================
+router.get('/sunbird-rc/discovery', async (req, res) => {
+  const query = req.query.q as string;
+  const result = await SunbirdRCAdapter.discovery(query);
+  res.json(result);
+});
+
+router.get('/sunbird-rc/registry/:id', async (req, res) => {
+  const result = await SunbirdRCAdapter.registry(req.params.id);
+  res.json(result);
+});
+
+router.post('/sunbird-rc/telemetry', async (req, res) => {
+  const result = await SunbirdRCAdapter.telemetry(req.body);
+  res.json(result);
+});
+
+router.post('/sunbird-rc/claims', async (req, res) => {
+  const result = await SunbirdRCAdapter.claims(req.body);
+  res.json(result);
+});
+
+router.post('/sunbird-rc/attestation', async (req, res) => {
+  const { claimId } = req.body;
+  const result = await SunbirdRCAdapter.attestation(claimId);
+  res.json(result);
+});
+
+// ==========================================
+// 15. e-Sankhyiki RAG Official Datasets (Requirement 4 & Research Report)
+// ==========================================
+router.get('/e-sankhyiki/datasets', (req, res) => {
+  res.json({
+    portal: 'e-Sankhyiki (Official MoSPI Data Portal)',
+    portalUrl: 'https://esankhyiki.mospi.gov.in',
+    status: 'ACTIVE_GROUNDING_SOURCE',
+    datasets: ESankhyikiRAGAdapter.getOfficialDatasets(),
+  });
+});
+
 export default router;
+

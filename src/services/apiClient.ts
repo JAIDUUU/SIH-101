@@ -12,7 +12,14 @@ export class ApiClient {
 
     const res = await fetch(url, { ...options, headers });
     if (!res.ok) {
-      throw new Error(`API Error ${res.status}: ${res.statusText}`);
+      let errDetail = '';
+      try {
+        const errJson = await res.json();
+        if (errJson && errJson.error) {
+          errDetail = errJson.error;
+        }
+      } catch {}
+      throw new Error(errDetail || `API Error ${res.status}: ${res.statusText}`);
     }
     return res.json() as Promise<T>;
   }
@@ -122,6 +129,36 @@ export class ApiClient {
     return this.request<Course[]>('/recommendations');
   }
 
+  public static async getNextBestSkill() {
+    return this.request<any>('/recommendations/next-best-skill');
+  }
+
+  public static async aiAssessCompetency(data: {
+    competencyName: string;
+    competencyDomain?: string;
+    selfAssessedScore?: number;
+    quizPerformance?: {
+      quizTitle?: string;
+      scorePercentage?: number;
+    };
+    evidenceNotes?: string;
+    targetBenchmark?: number;
+  }) {
+    return this.request<{
+      competency: string;
+      currentAssessedLevel: number;
+      confidence: 'LOW' | 'MEDIUM' | 'HIGH';
+      evidence: string;
+      identifiedGap: number;
+      targetBenchmark: number;
+      recommendedNextAction: string;
+      source: string;
+    }>('/competencies/ai-assess', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   public static async getCourses() {
     return this.request<Course[]>('/courses');
   }
@@ -175,6 +212,18 @@ export class ApiClient {
     return this.request<{ status: string; quiz: GeneratedQuiz }>('/quizzes/publish', {
       method: 'POST',
       body: JSON.stringify({ quizId }),
+    });
+  }
+
+  public static async regenerateQuestion(params: {
+    questionId?: string;
+    documentName?: string;
+    difficulty?: string;
+    language?: string;
+  }) {
+    return this.request<{ success: boolean; question: any }>('/quizzes/regenerate-question', {
+      method: 'POST',
+      body: JSON.stringify(params),
     });
   }
 
@@ -245,4 +294,44 @@ export class ApiClient {
       message: string;
     }>('/supabase/seed', { method: 'POST' });
   }
+
+  // Master Data
+  public static async getMasterData() {
+    return this.request<{
+      success: boolean;
+      data: any;
+    }>('/master-data');
+  }
+
+  // AI Skill Gap Engine (Requirement 6)
+  public static async getGapAnalysis(benchmark: number = 80) {
+    return this.request<any>(`/competencies/gap-analysis?benchmark=${benchmark}`);
+  }
+
+  // Workforce Heatmap (Requirement 14)
+  public static async getWorkforceHeatmap(filters: {
+    organization?: string;
+    department?: string;
+    state_ut?: string;
+    designation?: string;
+    competency?: string;
+  } = {}) {
+    const params = new URLSearchParams();
+    if (filters.organization) params.set('organization', filters.organization);
+    if (filters.department) params.set('department', filters.department);
+    if (filters.state_ut) params.set('state_ut', filters.state_ut);
+    if (filters.designation) params.set('designation', filters.designation);
+    if (filters.competency) params.set('competency', filters.competency);
+    return this.request<any>(`/analytics/workforce-heatmap?${params.toString()}`);
+  }
+
+  // Sunbird RC & e-Sankhyiki (Requirements 1 & 4)
+  public static async getSunbirdDiscovery() {
+    return this.request<any>('/sunbird-rc/discovery');
+  }
+
+  public static async getESankhyikiDatasets() {
+    return this.request<any>('/e-sankhyiki/datasets');
+  }
 }
+

@@ -2,6 +2,16 @@ import type { OfficerProfile, CompetencyItem, Course, GeneratedQuiz, PeerOfficer
 import { PRIMARY_OFFICER, DEMO_SAMPLE_QUIZ } from '../src/data/mockData.ts';
 import { OFFICIAL_GOV_COURSES } from './officialCoursesService.ts';
 import { OFFICIAL_IGOT_SADHANA_COURSES } from './igotSadhanaCourses.ts';
+import {
+  CENTRAL_STATISTICAL_ORGANIZATIONS,
+  STATE_UT_STATISTICAL_ORGANIZATIONS,
+  STATE_UT_NAMES,
+  STATISTICAL_DESIGNATIONS,
+  STATISTICAL_DOMAINS,
+  TECHNICAL_COMPETENCIES,
+  TRAINING_ORGANIZATIONS,
+} from './statisticalMasterData.ts';
+import { CompetencyEngine } from './competencyEngine.ts';
 
 export interface SkillEventRecord {
   id: string;
@@ -33,9 +43,9 @@ export interface TrainerRecord {
 
 class DatabaseStore {
   public users: UserRecord[] = [
-    { id: 'usr-1', email: 'rajesh.kumar@mospi.gov.in', role: 'officer', name: 'Rajesh Kumar' },
-    { id: 'usr-2', email: 'dr.srao@nssta.gov.in', role: 'trainer', name: 'Dr. S. Rao' },
-    { id: 'usr-3', email: 'neeta.sharma@mospi.gov.in', role: 'admin', name: 'Neeta Sharma' },
+    { id: 'usr-1', email: 'rajesh.kumar@mospi.gov.in', role: 'officer', name: 'Rajesh Kumar', password: 'Officer@123' },
+    { id: 'usr-2', email: 'dr.srao@nssta.gov.in', role: 'trainer', name: 'Dr. S. Rao', password: 'Trainer@123' },
+    { id: 'usr-3', email: 'neeta.sharma@mospi.gov.in', role: 'admin', name: 'Neeta Sharma', password: 'Admin@123' },
   ];
 
   public trainers: TrainerRecord[] = [
@@ -63,6 +73,16 @@ class DatabaseStore {
     }
   ];
   public courses: Course[] = JSON.parse(JSON.stringify([...OFFICIAL_GOV_COURSES, ...OFFICIAL_IGOT_SADHANA_COURSES]));
+
+  public masterData = {
+    centralOrganizations: CENTRAL_STATISTICAL_ORGANIZATIONS,
+    stateOrganizations: STATE_UT_STATISTICAL_ORGANIZATIONS,
+    stateNames: STATE_UT_NAMES,
+    designations: STATISTICAL_DESIGNATIONS,
+    domains: STATISTICAL_DOMAINS,
+    technicalCompetencies: TECHNICAL_COMPETENCIES,
+    trainingOrganizations: TRAINING_ORGANIZATIONS,
+  };
 
   public peers: PeerOfficer[] = [
     {
@@ -131,3 +151,25 @@ class DatabaseStore {
 }
 
 export const db = new DatabaseStore();
+
+// Dynamically calibrate default officer profile to their domain
+if (db.officer) {
+  db.officer.governanceLevel = db.officer.governanceLevel || 'Central Government';
+  db.officer.organization = db.officer.organization || 'Ministry of Statistics and Programme Implementation (MoSPI) / National Statistical Office (NSO)';
+  db.officer.statisticalDomain = db.officer.statisticalDomain || 'Household Surveys';
+  db.officer.competencies = CompetencyEngine.evaluate({
+    designation: db.officer.designation,
+    department: db.officer.department,
+    experienceYears: db.officer.experienceYears,
+    cadre: db.officer.cadre,
+    statisticalDomain: db.officer.statisticalDomain,
+    organization: db.officer.organization,
+    governanceLevel: db.officer.governanceLevel,
+    selectedSkills: db.officer.selectedSkills,
+  });
+  db.officer.atRiskSkills = db.officer.competencies
+    .filter((c) => c.decayRisk?.isAtRisk)
+    .map((c) => c.name)
+    .slice(0, 3);
+}
+

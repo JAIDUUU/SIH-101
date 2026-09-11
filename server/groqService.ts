@@ -25,7 +25,7 @@ export class GroqService {
    */
   public static async recommendCourses(opts: {
     officer: OfficerProfile | any;
-    competencies?: Competency[];
+    competencies?: CompetencyItem[];
     availableCourses: Course[];
     query?: string;
   }): Promise<string> {
@@ -262,6 +262,41 @@ Return ONLY the raw JSON without markdown code fences.`;
       const parsed = JSON.parse(cleanJson);
 
       if (parsed && Array.isArray(parsed.questions) && parsed.questions.length > 0) {
+        // Validate each question according to NSSTA psychometric standards:
+        // exactly 4 options, valid correct option index, non-empty fields, source citation
+        const validatedQuestions = parsed.questions
+          .filter((q: any) => q.questionText && Array.isArray(q.options) && q.options.length >= 2)
+          .map((q: any, idx: number) => {
+            // Ensure exactly 4 options
+            let optsList: string[] = Array.isArray(q.options) ? [...q.options] : [];
+            while (optsList.length < 4) {
+              optsList.push(`Alternative Administrative Option ${String.fromCharCode(65 + optsList.length)}`);
+            }
+            if (optsList.length > 4) {
+              optsList = optsList.slice(0, 4);
+            }
+
+            const correctIdx = typeof q.correctOptionIndex === 'number' && q.correctOptionIndex >= 0 && q.correctOptionIndex < 4
+              ? q.correctOptionIndex
+              : 0;
+
+            return {
+              id: q.id || `q-${idx + 1}`,
+              questionNumber: idx + 1,
+              text: q.questionText || q.text || 'Question text pending trainer review.',
+              options: optsList,
+              correctOptionIndex: correctIdx,
+              explanation: q.explanation || `Derived from official guidelines in ${opts.documentName}.`,
+              sourceDoc: {
+                title: opts.documentName,
+                page: q.sourceDoc?.page || 1,
+                section: q.sourceDoc?.section || 'Standard Operating Procedures',
+                excerpt: q.sourceDoc?.excerpt || `Official MoSPI reference for ${opts.targetDomain}.`,
+              },
+              competencyDomain: opts.targetDomain,
+            };
+          });
+
         return {
           id: `quiz-groq-${Date.now()}`,
           title: parsed.title || `${opts.documentName.replace(/_/g, ' ')} Verification Drill`,
@@ -269,18 +304,150 @@ Return ONLY the raw JSON without markdown code fences.`;
           sourceType: (opts.fileType as any) || 'PDF',
           documentPages: 38,
           targetDomain: opts.targetDomain,
-          questionsCount: parsed.questions.length,
+          questionsCount: validatedQuestions.length,
           difficulty: (opts.difficulty as any) || 'Intermediate',
           language: (opts.language as any) || 'English',
           createdAt: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
-          status: 'Published',
-          questions: parsed.questions,
+          status: 'Draft', // Strict requirement: AI generated quizzes start as Draft and require Trainer Review & Approval before publishing
+          questions: validatedQuestions,
         };
       }
     } catch (err: any) {
       console.info('[GroqService] generateQuiz error:', err?.message || err);
     }
     return null;
+  }
+
+  /**
+   * AI-based competency evaluation using Groq LLM with deterministic fallback.
+   * Evaluates officer competency level based on profile, self-assessment, quiz drills, and official MoSPI benchmarks.
+   */
+  public static async evaluateCompetencyWithGroq(opts: {
+    officer: {
+      name?: string;
+      designation?: string;
+      department?: string;
+      cadre?: string;
+      experienceYears?: number;
+      responsibilities?: string;
+      previousTraining?: string;
+    };
+    competencyName: string;
+    competencyDomain: string;
+    selfAssessedScore?: number;
+    quizPerformance?: {
+      quizTitle?: string;
+      scorePercentage?: number;
+      answersSummary?: string;
+    };
+    evidenceNotes?: string;
+    targetBenchmark?: number;
+  }): Promise<{
+    competency: string;
+    currentAssessedLevel: number;
+    confidence: 'LOW' | 'MEDIUM' | 'HIGH';
+    evidence: string;
+    identifiedGap: number;
+    targetBenchmark: number;
+    recommendedNextAction: string;
+    source: 'GROQ_AI_EVALUATION' | 'DETERMINISTIC_RULE_EVALUATION';
+  }> {
+    const target = opts.targetBenchmark || 80;
+    const client = this.getClient();
+
+    if (client) {
+      try {
+        const prompt = `You are the Lead Psychometric & Competency Assessor for India's Official Statistical System (MoSPI / NSSTA).
+Perform an objective, evidence-based competency evaluation of this officer against the Indian Official Statistical Framework:
+
+OFFICER PROFILE:
+- Name: ${opts.officer.name || 'Officer'}
+- Designation: ${opts.officer.designation || 'Statistical Officer'}
+- Department / Division: ${opts.officer.department || 'MoSPI'}
+- Cadre: ${opts.officer.cadre || 'Subordinate Statistical Service'}
+- Experience: ${opts.officer.experienceYears || 3} years
+- Responsibilities: ${opts.officer.responsibilities || 'Standard statistical data collection and scrutiny'}
+- Previous Training: ${opts.officer.previousTraining || 'None recorded'}
+
+EVALUATION TARGET:
+- Competency: ${opts.competencyName} (${opts.competencyDomain})
+- Self-Assessed Score: ${opts.selfAssessedScore ?? 'Not declared'} / 100
+- Target Cadre Benchmark: ${target} / 100
+- Assessment Quiz Drill: ${opts.quizPerformance ? `Completed "${opts.quizPerformance.quizTitle}" with ${opts.quizPerformance.scorePercentage}%` : 'No recent exit drill taken'}
+- Recorded Evidence: ${opts.evidenceNotes || 'None'}
+
+Return ONLY a valid JSON object matching:
+{
+  "competency": "${opts.competencyName}",
+  "currentAssessedLevel": <integer 0-100>,
+  "confidence": <"LOW" | "MEDIUM" | "HIGH">,
+  "evidence": "<objective evidence statement citing actual quiz or experience>",
+  "identifiedGap": <integer non-negative>,
+  "targetBenchmark": ${target},
+  "recommendedNextAction": "<concise actionable training pathway on iGOT or NSSTA>"
+}`;
+
+        const completion = await client.chat.completions.create({
+          model: this.PRIMARY_MODEL,
+          messages: [
+            { role: 'system', content: 'You are an official MoSPI competency evaluation engine. Return ONLY valid JSON.' },
+            { role: 'user', content: prompt },
+          ],
+          temperature: 0.1,
+          max_tokens: 500,
+        });
+
+        const raw = completion.choices[0]?.message?.content || '';
+        const cleanJson = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+        const parsed = JSON.parse(cleanJson);
+
+        if (parsed && typeof parsed.currentAssessedLevel === 'number') {
+          return {
+            competency: parsed.competency || opts.competencyName,
+            currentAssessedLevel: Math.min(100, Math.max(10, parsed.currentAssessedLevel)),
+            confidence: parsed.confidence || (opts.quizPerformance ? 'HIGH' : 'MEDIUM'),
+            evidence: parsed.evidence || `Evaluated by AI Assessment Engine based on official criteria.`,
+            identifiedGap: Math.max(0, target - parsed.currentAssessedLevel),
+            targetBenchmark: target,
+            recommendedNextAction: parsed.recommendedNextAction || `Complete targeted refresher module on iGOT Karmayogi.`,
+            source: 'GROQ_AI_EVALUATION',
+          };
+        }
+      } catch (err: any) {
+        console.info('[GroqService] evaluateCompetencyWithGroq failed, using deterministic fallback:', err?.message || err);
+      }
+    }
+
+    // Deterministic fallback (Rule-based evaluation conforming to MoSPI FRAC standards)
+    let score = opts.selfAssessedScore || 65;
+    let confidence: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW';
+    let evidenceStr = 'Self-appraisal baseline (Unverified).';
+
+    if (opts.quizPerformance && typeof opts.quizPerformance.scorePercentage === 'number') {
+      score = Math.round(opts.quizPerformance.scorePercentage);
+      confidence = 'HIGH';
+      evidenceStr = `Validated via official NSSTA quiz drill: "${opts.quizPerformance.quizTitle}" (${score}% score).`;
+    } else if (opts.selfAssessedScore !== undefined) {
+      score = opts.selfAssessedScore;
+      confidence = 'MEDIUM';
+      evidenceStr = `Self-assessment declaration (${score}/100); pending practical drill verification.`;
+    }
+
+    const gap = Math.max(0, target - score);
+    const nextAction = gap > 15
+      ? `Enroll in mandatory NSSTA foundational drill for ${opts.competencyName} to bridge the ${gap}-point gap.`
+      : `Schedule periodic annual refresher on iGOT Karmayogi to sustain current proficiency above ${target}%.`;
+
+    return {
+      competency: opts.competencyName,
+      currentAssessedLevel: score,
+      confidence,
+      evidence: evidenceStr,
+      identifiedGap: gap,
+      targetBenchmark: target,
+      recommendedNextAction: nextAction,
+      source: 'DETERMINISTIC_RULE_EVALUATION',
+    };
   }
 
   private static buildDeterministicRecommendation(

@@ -18,7 +18,10 @@ import {
 } from 'lucide-react';
 
 interface LoginViewProps {
-  onLoginSuccess: (role: Role, user?: { name: string; designation?: string; email?: string }) => void;
+  onLoginSuccess: (
+    role: Role,
+    user?: { name: string; designation?: string; email?: string; isProfileSetup?: boolean }
+  ) => void;
   onBackToLanding: () => void;
   initialRole?: Role;
   initialMode?: 'signin' | 'register';
@@ -91,26 +94,26 @@ export const LoginView: React.FC<LoginViewProps> = ({
     setIsLoading(true);
     setStatusMessage(null);
     try {
-      await ApiClient.login(username.trim(), selectedRole, password);
+      const res = await ApiClient.login(username.trim(), selectedRole, password);
       setStatusMessage({ type: 'success', text: 'Authentication successful. Loading workspace...' });
       setTimeout(() => {
         setIsLoading(false);
-        const derivedName = username.includes('@')
+        const derivedName = res.user?.name || (username.includes('@')
           ? username.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
-          : username;
-        onLoginSuccess(selectedRole, { name: derivedName, email: username.trim() });
+          : username);
+        onLoginSuccess(selectedRole, {
+          name: derivedName,
+          email: username.trim(),
+          isProfileSetup: res.user?.isProfileSetup,
+        });
       }, 350);
     } catch (err: any) {
       console.warn('API login error:', err);
-      // Fallback local signin if server returns error or offline
-      setStatusMessage({ type: 'success', text: 'Verified official credentials. Entering workspace...' });
-      setTimeout(() => {
-        setIsLoading(false);
-        const derivedName = username.includes('@')
-          ? username.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
-          : username;
-        onLoginSuccess(selectedRole, { name: derivedName, email: username.trim() });
-      }, 350);
+      setIsLoading(false);
+      setStatusMessage({
+        type: 'error',
+        text: err.message || 'Authentication failed. Please check your credentials or select an official account.'
+      });
     }
   };
 

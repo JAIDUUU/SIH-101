@@ -20,7 +20,9 @@ import {
   Shield,
   Search,
   Check,
-  ExternalLink
+  ExternalLink,
+  Filter,
+  SlidersHorizontal
 } from 'lucide-react';
 import { ApiClient } from '../../services/apiClient';
 
@@ -35,6 +37,15 @@ export const AdminWorkforceView: React.FC<AdminWorkforceViewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'workforce' | 'trainers'>('workforce');
   const [selectedCadre, setSelectedCadre] = useState('All');
+
+  // Heatmap Filter State (Requirement 14)
+  const [filterOrg, setFilterOrg] = useState('ALL');
+  const [filterDept, setFilterDept] = useState('ALL');
+  const [filterState, setFilterState] = useState('ALL');
+  const [filterDesignation, setFilterDesignation] = useState('ALL');
+  const [filterCompetency, setFilterCompetency] = useState('ALL');
+  const [heatmapCells, setHeatmapCells] = useState<any[]>([]);
+  const [heatmapSummary, setHeatmapSummary] = useState<any>(null);
 
   // Trainer Provisioning Form State (Requirement 2)
   const [trainerId, setTrainerId] = useState('');
@@ -80,6 +91,28 @@ export const AdminWorkforceView: React.FC<AdminWorkforceViewProps> = ({
   useEffect(() => {
     loadTrainers();
   }, []);
+
+  const loadHeatmap = async () => {
+    try {
+      const res = await ApiClient.getWorkforceHeatmap({
+        organization: filterOrg === 'ALL' ? undefined : filterOrg,
+        department: filterDept === 'ALL' ? undefined : filterDept,
+        state_ut: filterState === 'ALL' ? undefined : filterState,
+        designation: filterDesignation === 'ALL' ? undefined : filterDesignation,
+        competency: filterCompetency === 'ALL' ? undefined : filterCompetency,
+      });
+      if (res && res.cells) {
+        setHeatmapCells(res.cells);
+        setHeatmapSummary(res.macroSummary);
+      }
+    } catch (err) {
+      console.warn('Could not load workforce heatmap:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadHeatmap();
+  }, [filterOrg, filterDept, filterState, filterDesignation, filterCompetency]);
 
   const handleCreateTrainer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -227,8 +260,8 @@ export const AdminWorkforceView: React.FC<AdminWorkforceViewProps> = ({
       {/* ========================================================================= */}
       {activeTab === 'workforce' && (
         <>
-          {/* 6 Macro Metrics Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+          {/* 8 Macro Metrics Cards (Requirement 14) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
             {/* 1. Cadre Readiness */}
             <div className="p-4 bg-white border border-zinc-300">
               <span className="text-[10px] font-technical uppercase text-zinc-500 font-bold block mb-1">
@@ -240,18 +273,18 @@ export const AdminWorkforceView: React.FC<AdminWorkforceViewProps> = ({
               </span>
             </div>
 
-            {/* 2. Coverage */}
+            {/* 2. Total Employees */}
             <div className="p-4 bg-white border border-zinc-300">
               <span className="text-[10px] font-technical uppercase text-zinc-500 font-bold block mb-1">
-                WORKFORCE COVERAGE
+                TOTAL EMPLOYEES
               </span>
-              <div className="text-2xl font-bold text-zinc-950 font-heading">94.2%</div>
+              <div className="text-2xl font-bold text-zinc-950 font-heading">6,420</div>
               <span className="text-[10px] font-technical text-zinc-500 block mt-1">
-                6,420 Active Profiles
+                Tracked in Ledger
               </span>
             </div>
 
-            {/* 3. Top Skill Gaps */}
+            {/* 3. Top Skill Gap */}
             <div className="p-4 bg-white border border-zinc-300">
               <span className="text-[10px] font-technical uppercase text-zinc-500 font-bold block mb-1">
                 TOP SKILL GAP
@@ -262,21 +295,43 @@ export const AdminWorkforceView: React.FC<AdminWorkforceViewProps> = ({
               </span>
             </div>
 
-            {/* 4. Role Readiness */}
+            {/* 4. Training Completion Rate */}
+            <div className="p-4 bg-white border border-zinc-300">
+              <span className="text-[10px] font-technical uppercase text-zinc-500 font-bold block mb-1">
+                COMPLETION RATE
+              </span>
+              <div className="text-2xl font-bold text-zinc-950 font-heading">74.6%</div>
+              <span className="text-[10px] font-technical text-emerald-700 font-semibold block mt-1">
+                4,789 Modules
+              </span>
+            </div>
+
+            {/* 5. Average Quiz Score */}
+            <div className="p-4 bg-white border border-zinc-300">
+              <span className="text-[10px] font-technical uppercase text-zinc-500 font-bold block mb-1">
+                AVG QUIZ SCORE
+              </span>
+              <div className="text-2xl font-bold text-zinc-950 font-heading">78.2%</div>
+              <span className="text-[10px] font-technical text-zinc-500 block mt-1">
+                8,920 Drills
+              </span>
+            </div>
+
+            {/* 6. Role Benchmark */}
             <div className="p-4 bg-white border border-zinc-300">
               <span className="text-[10px] font-technical uppercase text-zinc-500 font-bold block mb-1">
                 ROLE BENCHMARK
               </span>
               <div className="text-2xl font-bold text-zinc-950 font-heading">72.0%</div>
               <span className="text-[10px] font-technical text-zinc-500 block mt-1">
-                Across 4 Cadre Tiers
+                Across 4 Tiers
               </span>
             </div>
 
-            {/* 5. Future Readiness Index */}
+            {/* 7. Future Readiness Index */}
             <div className="p-4 bg-white border border-zinc-300">
               <span className="text-[10px] font-technical uppercase text-zinc-500 font-bold block mb-1">
-                FUTURE READINESS
+                FUTURE HORIZON
               </span>
               <div className="text-2xl font-bold text-zinc-950 font-heading">61.8%</div>
               <span className="text-[10px] font-technical text-amber-800 font-semibold block mt-1">
@@ -284,14 +339,14 @@ export const AdminWorkforceView: React.FC<AdminWorkforceViewProps> = ({
               </span>
             </div>
 
-            {/* 6. Interventions Needed */}
+            {/* 8. Priority Interventions */}
             <div className="p-4 bg-amber-50 border border-amber-300">
               <span className="text-[10px] font-technical uppercase text-amber-900 font-bold block mb-1">
                 INTERVENTIONS
               </span>
               <div className="text-2xl font-bold text-amber-950 font-heading">14 Sprints</div>
               <span className="text-[10px] font-technical text-amber-800 font-bold block mt-1">
-                Urgent Refresher Calls
+                Urgent Refresher
               </span>
             </div>
           </div>
@@ -353,7 +408,7 @@ export const AdminWorkforceView: React.FC<AdminWorkforceViewProps> = ({
               </div>
             </div>
 
-            {/* Right (5 cols): Cadre Role Readiness Breakdown */}
+            {/* Right (5 cols): Cadre Role Readiness Breakdown (bottom quick nav section removed as requested) */}
             <div className="lg:col-span-5 bg-white border border-zinc-300 p-6 shadow-xs space-y-4">
               <div className="flex items-center justify-between border-b border-zinc-200 pb-3">
                 <div>
@@ -402,25 +457,365 @@ export const AdminWorkforceView: React.FC<AdminWorkforceViewProps> = ({
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
 
-              {/* Quick Nav Cards */}
-              <div className="pt-4 border-t border-zinc-200 grid grid-cols-2 gap-2 text-xs font-technical">
-                <div
-                  onClick={() => onNavigate('regional-readiness')}
-                  className="p-3 bg-zinc-50 border border-zinc-200 hover:border-zinc-900 cursor-pointer transition-colors"
+          {/* ========================================================================= */}
+          {/* WORKFORCE SKILL HEATMAP WITH 5 FILTERS (Requirement 14)                   */}
+          {/* Organization, Department, State/UT, Designation, Competency               */}
+          {/* ========================================================================= */}
+          <div className="bg-white border border-zinc-900 p-6 shadow-xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-200 pb-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] font-technical uppercase font-bold text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5">
+                    HEATMAP ENGINE
+                  </span>
+                  <span className="text-xs font-technical text-zinc-500">
+                    MULTI-DIMENSIONAL COMPETENCY MATRIX
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-zinc-950 font-heading">
+                  India-Wide Workforce Skill Heatmap & Gap Telemetry
+                </h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setFilterOrg('ALL');
+                    setFilterDept('ALL');
+                    setFilterState('ALL');
+                    setFilterDesignation('ALL');
+                    setFilterCompetency('ALL');
+                  }}
+                  className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border border-zinc-300 text-xs font-technical uppercase font-semibold cursor-pointer"
                 >
-                  <MapPin className="w-4 h-4 text-amber-700 mb-1" />
-                  <div className="font-bold text-zinc-950">Regional Zones</div>
-                  <span className="text-[10px] text-zinc-500">North, West, South, East</span>
+                  Reset Filters
+                </button>
+              </div>
+            </div>
+
+            {/* 5 Filters Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 p-3 bg-zinc-50 border border-zinc-200">
+              {/* Filter 1: Organization */}
+              <div>
+                <label className="text-[10px] font-technical uppercase font-bold text-zinc-600 block mb-1">
+                  1. Organization
+                </label>
+                <select
+                  value={filterOrg}
+                  onChange={(e) => setFilterOrg(e.target.value)}
+                  className="w-full text-xs font-technical bg-white border border-zinc-300 p-2 text-zinc-900 focus:border-zinc-950"
+                >
+                  <option value="ALL">All Organizations</option>
+                  <option value="MoSPI / NSO">MoSPI / NSO</option>
+                  <option value="State DES">State DES</option>
+                  <option value="Labour Bureau">Labour Bureau</option>
+                  <option value="Ministry of Agriculture DES">Ministry of Agriculture DES</option>
+                </select>
+              </div>
+
+              {/* Filter 2: Department / Division */}
+              <div>
+                <label className="text-[10px] font-technical uppercase font-bold text-zinc-600 block mb-1">
+                  2. Department / Division
+                </label>
+                <select
+                  value={filterDept}
+                  onChange={(e) => setFilterDept(e.target.value)}
+                  className="w-full text-xs font-technical bg-white border border-zinc-300 p-2 text-zinc-900 focus:border-zinc-950"
+                >
+                  <option value="ALL">All Divisions</option>
+                  <option value="Field Operations Division (FOD)">Field Operations (FOD)</option>
+                  <option value="National Accounts Division (NAD)">National Accounts (NAD)</option>
+                  <option value="Price Statistics Division (PSD)">Price Statistics (PSD)</option>
+                  <option value="Economic Statistics Division (ESD)">Economic Statistics (ESD)</option>
+                  <option value="State Directorate of Economics & Statistics">State DES Units</option>
+                </select>
+              </div>
+
+              {/* Filter 3: State / UT */}
+              <div>
+                <label className="text-[10px] font-technical uppercase font-bold text-zinc-600 block mb-1">
+                  3. State / UT
+                </label>
+                <select
+                  value={filterState}
+                  onChange={(e) => setFilterState(e.target.value)}
+                  className="w-full text-xs font-technical bg-white border border-zinc-300 p-2 text-zinc-900 focus:border-zinc-950"
+                >
+                  <option value="ALL">All States / UTs</option>
+                  <option value="Uttar Pradesh">Uttar Pradesh</option>
+                  <option value="Maharashtra">Maharashtra</option>
+                  <option value="Karnataka">Karnataka</option>
+                  <option value="Delhi">Delhi</option>
+                  <option value="West Bengal">West Bengal</option>
+                  <option value="Himachal Pradesh">Himachal Pradesh</option>
+                  <option value="Madhya Pradesh">Madhya Pradesh</option>
+                </select>
+              </div>
+
+              {/* Filter 4: Designation */}
+              <div>
+                <label className="text-[10px] font-technical uppercase font-bold text-zinc-600 block mb-1">
+                  4. Designation
+                </label>
+                <select
+                  value={filterDesignation}
+                  onChange={(e) => setFilterDesignation(e.target.value)}
+                  className="w-full text-xs font-technical bg-white border border-zinc-300 p-2 text-zinc-900 focus:border-zinc-950"
+                >
+                  <option value="ALL">All Designations</option>
+                  <option value="Junior Statistical Officer (JSO)">Junior Statistical Officer (JSO)</option>
+                  <option value="Senior Statistical Officer (SSO)">Senior Statistical Officer (SSO)</option>
+                  <option value="Statistical Officer (SO)">Statistical Officer (SO)</option>
+                  <option value="Statistical Investigator">Statistical Investigator</option>
+                  <option value="Assistant / Deputy Director (ISS)">Assistant / Deputy Director (ISS)</option>
+                </select>
+              </div>
+
+              {/* Filter 5: Competency */}
+              <div>
+                <label className="text-[10px] font-technical uppercase font-bold text-zinc-600 block mb-1">
+                  5. Competency
+                </label>
+                <select
+                  value={filterCompetency}
+                  onChange={(e) => setFilterCompetency(e.target.value)}
+                  className="w-full text-xs font-technical bg-white border border-zinc-300 p-2 text-zinc-900 focus:border-zinc-950"
+                >
+                  <option value="ALL">All Competencies</option>
+                  <option value="Sampling Methodology & Design">Sampling Methodology</option>
+                  <option value="Python & Automated ETL Microdata Scripting">Python ETL Microdata</option>
+                  <option value="CSPro / CAPI Logic Verification & API Sync">CAPI / CSPro Verification</option>
+                  <option value="Price Index & Imputation Systems">Price Index & Imputation</option>
+                  <option value="Gross Value Added (GVA) & Supply-Use Tables">GVA & National Accounts</option>
+                  <option value="GIS Spatial Demarcation & Geofencing (UFS)">GIS Spatial UFS</option>
+                  <option value="Annual Survey of Industries (ASI) Protocols">ASI Survey Protocols</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Heatmap Grid Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {(heatmapCells.length > 0 ? heatmapCells : [
+                {
+                  id: 'hm-1',
+                  organization: 'MoSPI / NSO',
+                  department: 'Field Operations Division (FOD)',
+                  stateOrUt: 'Uttar Pradesh',
+                  designation: 'Junior Statistical Officer (JSO)',
+                  competency: 'Sampling Methodology & Design',
+                  domain: 'Statistical',
+                  averageScore: 78,
+                  targetBenchmark: 85,
+                  status: 'Optimal',
+                  officersCount: 380,
+                },
+                {
+                  id: 'hm-2',
+                  organization: 'MoSPI / NSO',
+                  department: 'Field Operations Division (FOD)',
+                  stateOrUt: 'Uttar Pradesh',
+                  designation: 'Junior Statistical Officer (JSO)',
+                  competency: 'Python & Automated ETL Microdata Scripting',
+                  domain: 'Technical',
+                  averageScore: 42,
+                  targetBenchmark: 75,
+                  status: 'Critical Deficit',
+                  officersCount: 380,
+                },
+                {
+                  id: 'hm-3',
+                  organization: 'MoSPI / NSO',
+                  department: 'Field Operations Division (FOD)',
+                  stateOrUt: 'Maharashtra',
+                  designation: 'Senior Statistical Officer (SSO)',
+                  competency: 'CSPro / CAPI Logic Verification & API Sync',
+                  domain: 'Digital Governance',
+                  averageScore: 84,
+                  targetBenchmark: 85,
+                  status: 'Optimal',
+                  officersCount: 220,
+                },
+                {
+                  id: 'hm-4',
+                  organization: 'MoSPI / NSO',
+                  department: 'Price Statistics Division (PSD)',
+                  stateOrUt: 'Delhi',
+                  designation: 'Statistical Officer (SO)',
+                  competency: 'Price Index & Imputation Systems',
+                  domain: 'Statistical',
+                  averageScore: 81,
+                  targetBenchmark: 85,
+                  status: 'Optimal',
+                  officersCount: 160,
+                },
+                {
+                  id: 'hm-5',
+                  organization: 'MoSPI / NSO',
+                  department: 'National Accounts Division (NAD)',
+                  stateOrUt: 'Delhi',
+                  designation: 'Assistant / Deputy Director (ISS)',
+                  competency: 'Gross Value Added (GVA) & Supply-Use Tables',
+                  domain: 'Statistical',
+                  averageScore: 88,
+                  targetBenchmark: 90,
+                  status: 'Optimal',
+                  officersCount: 95,
+                },
+                {
+                  id: 'hm-6',
+                  organization: 'State DES',
+                  department: 'State Directorate of Economics & Statistics',
+                  stateOrUt: 'Karnataka',
+                  designation: 'Statistical Investigator',
+                  competency: 'GIS Spatial Demarcation & Geofencing (UFS)',
+                  domain: 'Technical / GIS',
+                  averageScore: 48,
+                  targetBenchmark: 75,
+                  status: 'Critical Deficit',
+                  officersCount: 290,
+                },
+              ]).map((cell: any) => {
+                const isCritical = cell.status === 'Critical Deficit' || cell.averageScore < 60;
+                const isModerate = cell.status === 'Moderate Deficit' || (cell.averageScore >= 60 && cell.averageScore < 75);
+                return (
+                  <div
+                    key={cell.id}
+                    className={`p-4 border transition-colors ${
+                      isCritical
+                        ? 'bg-rose-50/70 border-rose-300 hover:border-rose-500'
+                        : isModerate
+                        ? 'bg-amber-50/70 border-amber-300 hover:border-amber-500'
+                        : 'bg-emerald-50/60 border-emerald-300 hover:border-emerald-500'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div>
+                        <span className="text-[10px] font-technical uppercase font-bold text-zinc-500">
+                          {cell.organization} · {cell.stateOrUt}
+                        </span>
+                        <h4 className="text-xs font-bold text-zinc-950 font-heading">
+                          {cell.competency}
+                        </h4>
+                      </div>
+                      <span
+                        className={`text-[9px] font-technical uppercase font-bold px-1.5 py-0.5 shrink-0 ${
+                          isCritical
+                            ? 'bg-rose-600 text-white'
+                            : isModerate
+                            ? 'bg-amber-600 text-white'
+                            : 'bg-emerald-700 text-white'
+                        }`}
+                      >
+                        {cell.status}
+                      </span>
+                    </div>
+
+                    <div className="text-[11px] text-zinc-600 font-sans mb-3">
+                      {cell.designation} · {cell.department}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs font-technical">
+                        <span className="text-zinc-700 font-bold">Average Score: {cell.averageScore}%</span>
+                        <span className="text-zinc-500">Benchmark: {cell.targetBenchmark}%</span>
+                      </div>
+                      <div className="w-full bg-zinc-200 h-1.5 overflow-hidden">
+                        <div
+                          className={`h-full ${
+                            isCritical ? 'bg-rose-600' : isModerate ? 'bg-amber-500' : 'bg-emerald-600'
+                          }`}
+                          style={{ width: `${cell.averageScore}%` }}
+                        />
+                      </div>
+                      <div className="text-[10px] font-technical text-zinc-500 pt-0.5">
+                        Sample Size: {cell.officersCount} Verified Officers
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Bottom Row: Department-Wise & State-Wise Competency Comparison */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4 border-t border-zinc-200">
+              {/* Department-Wise Competency Comparison */}
+              <div className="p-4 bg-zinc-50 border border-zinc-300 space-y-3">
+                <div className="flex items-center justify-between border-b border-zinc-200 pb-2">
+                  <div>
+                    <span className="text-[10px] font-technical uppercase font-bold text-zinc-500">
+                      COMPARATIVE ANALYTICS
+                    </span>
+                    <h4 className="text-xs font-bold text-zinc-950 font-heading">
+                      Department-Wise Competency Comparison
+                    </h4>
+                  </div>
+                  <span className="text-[10px] font-technical text-zinc-500">Readiness vs 80% Benchmark</span>
                 </div>
 
-                <div
-                  onClick={() => onNavigate('future-readiness')}
-                  className="p-3 bg-zinc-50 border border-zinc-200 hover:border-zinc-900 cursor-pointer transition-colors"
-                >
-                  <Calendar className="w-4 h-4 text-amber-700 mb-1" />
-                  <div className="font-bold text-zinc-950">2026–2028 Horizon</div>
-                  <span className="text-[10px] text-zinc-500">AI/ML & Cloud Ready</span>
+                <div className="space-y-2.5 text-xs">
+                  {[
+                    { dept: 'National Accounts Division (NAD)', score: 84, officers: 180, status: 'Optimal' },
+                    { dept: 'Economic Statistics Division (ESD)', score: 79, officers: 230, status: 'Optimal' },
+                    { dept: 'Price Statistics Division (PSD)', score: 74, officers: 210, status: 'Moderate' },
+                    { dept: 'Social Statistics Division (SSD)', score: 71, officers: 195, status: 'Moderate' },
+                    { dept: 'Field Operations Division (FOD)', score: 68, officers: 640, status: 'Deficit' },
+                    { dept: 'State DES Field Cells', score: 65, officers: 890, status: 'Deficit' },
+                  ].map((item, i) => (
+                    <div key={i} className="space-y-1">
+                      <div className="flex justify-between text-[11px]">
+                        <span className="font-bold text-zinc-900">{item.dept}</span>
+                        <span className="font-technical text-zinc-600">{item.score}% ({item.officers} Officers)</span>
+                      </div>
+                      <div className="w-full bg-zinc-200 h-1.5">
+                        <div
+                          className={`h-full ${item.score >= 75 ? 'bg-emerald-600' : item.score >= 70 ? 'bg-amber-500' : 'bg-rose-600'}`}
+                          style={{ width: `${item.score}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* State / Organization Comparison */}
+              <div className="p-4 bg-zinc-50 border border-zinc-300 space-y-3">
+                <div className="flex items-center justify-between border-b border-zinc-200 pb-2">
+                  <div>
+                    <span className="text-[10px] font-technical uppercase font-bold text-zinc-500">
+                      REGIONAL SPREAD
+                    </span>
+                    <h4 className="text-xs font-bold text-zinc-950 font-heading">
+                      State / Organization Comparison
+                    </h4>
+                  </div>
+                  <span className="text-[10px] font-technical text-zinc-500">Aggregated Competency Index</span>
+                </div>
+
+                <div className="space-y-2.5 text-xs">
+                  {[
+                    { entity: 'MoSPI Central Headquarters (New Delhi)', score: 82, coverage: '98%' },
+                    { entity: 'Maharashtra (DES & FOD Mumbai / Pune)', score: 78, coverage: '94%' },
+                    { entity: 'Tamil Nadu (FOD Chennai & DES)', score: 77, coverage: '91%' },
+                    { entity: 'Karnataka (DES & FOD Bengaluru)', score: 73, coverage: '89%' },
+                    { entity: 'West Bengal (ISW Kolkata & DES)', score: 70, coverage: '88%' },
+                    { entity: 'Uttar Pradesh (FOD Lucknow & Bareilly)', score: 66, coverage: '85%' },
+                  ].map((item, i) => (
+                    <div key={i} className="space-y-1">
+                      <div className="flex justify-between text-[11px]">
+                        <span className="font-bold text-zinc-900">{item.entity}</span>
+                        <span className="font-technical text-zinc-600">{item.score}% Index · {item.coverage} Cov</span>
+                      </div>
+                      <div className="w-full bg-zinc-200 h-1.5">
+                        <div
+                          className={`h-full ${item.score >= 78 ? 'bg-emerald-600' : item.score >= 70 ? 'bg-amber-500' : 'bg-rose-600'}`}
+                          style={{ width: `${item.score}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>

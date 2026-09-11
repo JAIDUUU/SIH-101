@@ -22,68 +22,248 @@ export const LearningPathView: React.FC<LearningPathViewProps> = ({
   officer,
   onNavigate,
 }) => {
-  const roadmapSteps = [
-    {
-      stepNumber: 1,
-      title: 'Python Fundamentals for Public Servants',
-      status: 'completed',
-      source: 'iGOT Karmayogi',
-      duration: '12 Hours',
-      difficulty: 'Foundational',
-      matchPercentage: 99,
-      competenciesGained: ['Python Syntax', 'Basic Data Types', 'Loops & Functions', 'CSV File I/O'],
-      whyRecommended:
-        'Foundational prerequisite completed during initial onboarding; validated core scripting syntax.',
-    },
-    {
-      stepNumber: 2,
-      title: 'Python for Statistical Analysis & NSSO Data Processing',
-      status: 'active',
-      source: 'NSSTA TPAC',
-      duration: '18 Hours (Self-paced + 2 Labs)',
-      difficulty: 'Intermediate',
-      matchPercentage: 96,
-      competenciesGained: ['Pandas for Microdata', 'NSSO Fixed-Width Parsing', 'Sampling Variance Automation', 'Clean Data Export'],
-      whyRecommended:
-        'Directly addresses your primary competency gap (Technical domain: 46%). Aligned with upcoming FOD quarterly retail survey schedules.',
-    },
-    {
-      stepNumber: 3,
-      title: 'Data Visualization & Statistical Reporting in Python',
-      status: 'upcoming',
-      source: 'NSSTA TPAC',
-      duration: '14 Hours',
-      difficulty: 'Intermediate',
-      matchPercentage: 92,
-      competenciesGained: ['Matplotlib & Seaborn', 'Official Chart Styling Standards', 'Automated PDF Dossiers', 'Interactive Dashboards'],
-      whyRecommended:
-        'Empowers field officers to generate executive summary infographics for District Collector review without manual spreadsheet plotting.',
-    },
-    {
-      stepNumber: 4,
-      title: 'Applied Statistics & Imputation Models for Official Surveys',
-      status: 'upcoming',
-      source: 'NSSTA TPAC',
-      duration: '20 Hours',
-      difficulty: 'Advanced',
-      matchPercentage: 89,
-      competenciesGained: ['Jackknife Variance', 'Donor Imputation Rules', 'Small Area Estimation', 'Survey Calibration'],
-      whyRecommended:
-        'Bridges the gap to Senior Statistical Officer (SSO) benchmark (requires ≥ 80% overall readiness).',
-    },
-    {
-      stepNumber: 5,
-      title: 'AI/ML & Predictive Modeling for Official Statistics',
-      status: 'upcoming',
-      source: 'NSSTA Modernization Wing',
-      duration: '24 Hours',
-      difficulty: 'Advanced',
-      matchPercentage: 85,
-      competenciesGained: ['Supervised Satellite Imagery Crop Yields', 'GDP Nowcasting Sub-indices', 'Automated Anomaly Detection'],
-      whyRecommended:
-        'Part of the MoSPI 2026–2030 National Modernization Roadmap; prepares officers for AI cadre deputations.',
-    },
-  ];
+  const [activeDomain, setActiveDomain] = React.useState<string>(
+    officer.statisticalDomain || 'Survey Sampling (NSSO / PLFS)'
+  );
+
+  const getDomainRoadmap = (domain: string) => {
+    if (domain.includes('Sampling') || domain.includes('PLFS') || domain.includes('HCES')) {
+      return [
+        {
+          stepNumber: 1,
+          title: 'Operational Protocols for Urban Frame Survey (UFS)',
+          status: 'completed',
+          source: 'nssta.gov.in (NSSTA)',
+          duration: '12 Hours',
+          difficulty: 'Foundational',
+          matchPercentage: 99,
+          competenciesGained: ['UFS Block Demarcation', 'Frame Updating', 'Cartographic Verification'],
+          whyRecommended: 'Foundational prerequisite completed during initial onboarding; validated core field frames.',
+        },
+        {
+          stepNumber: 2,
+          title: 'Multi-Stage Stratified Sampling & Probability Proportional to Size (PPS)',
+          status: 'active',
+          source: 'NSSTA TPAC',
+          duration: '18 Hours (Self-paced + 2 Labs)',
+          difficulty: 'Intermediate',
+          matchPercentage: 97,
+          competenciesGained: ['Multi-Stage Allocation', 'PPS Sampling', 'Sub-sample Rotation', 'First-Stage Unit Selection'],
+          whyRecommended: `Directly addresses your primary competency gap for ${officer.cadre}. Aligned with upcoming PLFS & HCES rounds.`,
+        },
+        {
+          stepNumber: 3,
+          title: 'CAPI Digital Data Collection & Schedule Field Audits',
+          status: 'upcoming',
+          source: 'iGOT Karmayogi / MoSPI',
+          duration: '14 Hours',
+          difficulty: 'Intermediate',
+          matchPercentage: 93,
+          competenciesGained: ['CAPI Validation Scripts', 'Field Audit Checklists', 'Real-Time Sync Diagnostics'],
+          whyRecommended: 'Prevents non-sampling errors and equips officers for automated tablet-based survey supervision.',
+        },
+        {
+          stepNumber: 4,
+          title: 'Non-Sampling Error Treatment & Donor Imputation Models',
+          status: 'upcoming',
+          source: 'NSSTA TPAC',
+          duration: '20 Hours',
+          difficulty: 'Advanced',
+          matchPercentage: 90,
+          competenciesGained: ['Jackknife Variance', 'Hot-Deck Imputation', 'Survey Weight Calibration'],
+          whyRecommended: 'Bridges the gap to Senior Statistical Officer benchmark (requires ≥80% readiness).',
+        },
+        {
+          stepNumber: 5,
+          title: 'Official Survey Sampling Lead & Cadre Certification',
+          status: 'upcoming',
+          source: 'NSSTA Greater Noida',
+          duration: '2 Weeks (Residential Capstone)',
+          difficulty: 'Advanced',
+          matchPercentage: 86,
+          competenciesGained: ['National Survey Coordination', 'Policy Brief Generation', 'Complex Sampling Diagnostics'],
+          whyRecommended: 'Prepares officers for national round leadership and executive statistical officer promotions.',
+        },
+      ];
+    } else if (domain.includes('Price') || domain.includes('CPI') || domain.includes('WPI')) {
+      return [
+        {
+          stepNumber: 1,
+          title: 'Item Basket Specifications & Market Quotation Collection',
+          status: 'completed',
+          source: 'mospi.gov.in (MoSPI)',
+          duration: '10 Hours',
+          difficulty: 'Foundational',
+          matchPercentage: 98,
+          competenciesGained: ['Price Specification Standards', 'Market Center Identification', 'Frequency Rules'],
+          whyRecommended: 'Foundational certification completed for Price Statistics Division field units.',
+        },
+        {
+          stepNumber: 2,
+          title: 'Consumer Price Index (CPI) Compilation & Price Imputation Models',
+          status: 'active',
+          source: 'MoSPI Training Portal',
+          duration: '18 Hours',
+          difficulty: 'Intermediate',
+          matchPercentage: 96,
+          competenciesGained: ['Geometric Mean Formulae', 'Laspeyres Aggregation', 'Price Outlier Detection'],
+          whyRecommended: `Critical operational training for ${officer.cadre} monthly index calculation schedules.`,
+        },
+        {
+          stepNumber: 3,
+          title: 'Non-Response Imputation for Seasonal Price Quotations',
+          status: 'upcoming',
+          source: 'NSSTA TPAC',
+          duration: '14 Hours',
+          difficulty: 'Intermediate',
+          matchPercentage: 92,
+          competenciesGained: ['Seasonal Adjustment', 'Comparable Substitution', 'Carry-Forward Controls'],
+          whyRecommended: 'Maintains index reliability during seasonal supply shocks and missing vendor reports.',
+        },
+        {
+          stepNumber: 4,
+          title: 'Hedonic Adjustments & Chain-Weighted Price Indexing',
+          status: 'upcoming',
+          source: 'NSSTA Analytics Wing',
+          duration: '20 Hours',
+          difficulty: 'Advanced',
+          matchPercentage: 88,
+          competenciesGained: ['Hedonic Regression', 'Quality Adjustments', 'Superlative Index Numbers'],
+          whyRecommended: 'Prepares division for upcoming MoSPI CPI base revisions.',
+        },
+        {
+          stepNumber: 5,
+          title: 'National Inflation Series Cadre Lead Certification',
+          status: 'upcoming',
+          source: 'MoSPI Central Training Facility',
+          duration: '24 Hours',
+          difficulty: 'Advanced',
+          matchPercentage: 85,
+          competenciesGained: ['Monetary Policy Interface', 'Sub-Index Harmonization', 'Macro Headline Briefings'],
+          whyRecommended: 'Official credential for senior economists and price statistics division officers.',
+        },
+      ];
+    } else if (domain.includes('National Accounts') || domain.includes('GDP') || domain.includes('GVA')) {
+      return [
+        {
+          stepNumber: 1,
+          title: 'System of National Accounts (SNA 2008 / 2025 Framework)',
+          status: 'completed',
+          source: 'mospi.gov.in (MoSPI)',
+          duration: '14 Hours',
+          difficulty: 'Foundational',
+          matchPercentage: 99,
+          competenciesGained: ['SNA Accounting Rules', 'Production Boundary', 'Institutional Sectors'],
+          whyRecommended: 'Core conceptual grounding verified for National Accounts Division operations.',
+        },
+        {
+          stepNumber: 2,
+          title: 'GVA Compilation, SUT & Gross State Domestic Product (GSDP)',
+          status: 'active',
+          source: 'MoSPI Central Training Facility',
+          duration: '22 Hours',
+          difficulty: 'Intermediate',
+          matchPercentage: 95,
+          competenciesGained: ['Gross Value Added (GVA)', 'Supply-Use Tables (SUT)', 'GSDP Estimation'],
+          whyRecommended: `Directly targets key competency gaps in macroeconomic aggregate compilation.`,
+        },
+        {
+          stepNumber: 3,
+          title: 'Corporate Financials & MCA21 Database Extrapolations',
+          status: 'upcoming',
+          source: 'NSSTA TPAC',
+          duration: '16 Hours',
+          difficulty: 'Intermediate',
+          matchPercentage: 91,
+          competenciesGained: ['MCA21 Parsing', 'Paid-up Capital Blow-up Factors', 'Enterprise Aggregates'],
+          whyRecommended: 'Enables accurate formal enterprise sector value addition estimations.',
+        },
+        {
+          stepNumber: 4,
+          title: 'Deflators, Double Deflation, and Capital Stock Balancing',
+          status: 'upcoming',
+          source: 'NSSTA Analytics Lab',
+          duration: '20 Hours',
+          difficulty: 'Advanced',
+          matchPercentage: 89,
+          competenciesGained: ['Double Deflation', 'Perpetual Inventory Method (PIM)', 'Capital Formation'],
+          whyRecommended: 'Advanced methodology aligned with international statistical standards.',
+        },
+        {
+          stepNumber: 5,
+          title: 'National Income Accounting Executive Certification',
+          status: 'upcoming',
+          source: 'MoSPI / NSSTA Greater Noida',
+          duration: '2 Weeks Capstone',
+          difficulty: 'Advanced',
+          matchPercentage: 84,
+          competenciesGained: ['GDP Release Briefings', 'Fiscal Deficit Aggregates', 'International Reporting'],
+          whyRecommended: 'Executive credential for NAD Directorate postings.',
+        },
+      ];
+    } else {
+      // Data Science / Technical Track
+      return [
+        {
+          stepNumber: 1,
+          title: 'Python Fundamentals for Public Servants',
+          status: 'completed',
+          source: 'iGOT Karmayogi',
+          duration: '12 Hours',
+          difficulty: 'Foundational',
+          matchPercentage: 99,
+          competenciesGained: ['Python Syntax', 'Basic Data Types', 'Loops & Functions', 'CSV File I/O'],
+          whyRecommended: 'Foundational prerequisite completed during initial onboarding; validated core scripting syntax.',
+        },
+        {
+          stepNumber: 2,
+          title: 'Python for Statistical Analysis & NSSO Data Processing',
+          status: 'active',
+          source: 'NSSTA TPAC',
+          duration: '18 Hours (Self-paced + 2 Labs)',
+          difficulty: 'Intermediate',
+          matchPercentage: 96,
+          competenciesGained: ['Pandas for Microdata', 'NSSO Fixed-Width Parsing', 'Sampling Variance Automation', 'Clean Data Export'],
+          whyRecommended: `Directly addresses your primary technical gap in ${officer.cadre}. Aligned with FOD quarterly survey schedules.`,
+        },
+        {
+          stepNumber: 3,
+          title: 'Data Visualization & Statistical Reporting in Python',
+          status: 'upcoming',
+          source: 'NSSTA TPAC',
+          duration: '14 Hours',
+          difficulty: 'Intermediate',
+          matchPercentage: 92,
+          competenciesGained: ['Matplotlib & Seaborn', 'Official Chart Styling Standards', 'Automated PDF Dossiers', 'Interactive Dashboards'],
+          whyRecommended: 'Empowers field officers to generate executive summary infographics for District Collector review.',
+        },
+        {
+          stepNumber: 4,
+          title: 'Applied Statistics & Imputation Models for Official Surveys',
+          status: 'upcoming',
+          source: 'NSSTA TPAC',
+          duration: '20 Hours',
+          difficulty: 'Advanced',
+          matchPercentage: 89,
+          competenciesGained: ['Jackknife Variance', 'Donor Imputation Rules', 'Small Area Estimation', 'Survey Calibration'],
+          whyRecommended: 'Bridges the gap to Senior Statistical Officer benchmark (requires ≥80% overall readiness).',
+        },
+        {
+          stepNumber: 5,
+          title: 'AI/ML & Predictive Modeling for Official Statistics',
+          status: 'upcoming',
+          source: 'NSSTA Modernization Wing',
+          duration: '24 Hours',
+          difficulty: 'Advanced',
+          matchPercentage: 85,
+          competenciesGained: ['Supervised Satellite Imagery Crop Yields', 'GDP Nowcasting Sub-indices', 'Automated Anomaly Detection'],
+          whyRecommended: 'Part of the MoSPI 2026–2030 National Modernization Roadmap; prepares officers for AI cadre deputations.',
+        },
+      ];
+    }
+  };
+
+  const roadmapSteps = getDomainRoadmap(activeDomain);
 
   return (
     <div className="space-y-6">
@@ -102,10 +282,37 @@ export const LearningPathView: React.FC<LearningPathViewProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-2 font-technical text-xs">
+          <div className="flex flex-wrap items-center gap-2 font-technical text-xs">
             <span className="px-3 py-1.5 bg-zinc-100 border border-zinc-300 text-zinc-800">
               TARGET CADRE: <strong>Senior Statistical Officer</strong>
             </span>
+          </div>
+        </div>
+
+        {/* Dynamic Domain Track Switcher */}
+        <div className="mt-5 pt-4 border-t border-zinc-200">
+          <div className="text-[10px] font-technical uppercase text-zinc-500 font-bold mb-2">
+            Active Competency Pathway Track:
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: 'Survey Sampling (NSSO / PLFS)', label: 'Survey Sampling (NSSO/PLFS)' },
+              { id: 'Price & Inflation Statistics (CPI / WPI)', label: 'Price & Inflation (CPI/WPI)' },
+              { id: 'National Accounts & GDP Estimation', label: 'National Accounts & GDP' },
+              { id: 'Technical & Data Science', label: 'Python & Data Science' },
+            ].map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setActiveDomain(t.id)}
+                className={`px-3 py-1.5 text-xs font-technical uppercase tracking-wider transition-colors cursor-pointer border ${
+                  activeDomain === t.id
+                    ? 'bg-zinc-950 text-amber-400 border-zinc-950 font-bold shadow-xs'
+                    : 'bg-zinc-50 hover:bg-zinc-100 text-zinc-700 border-zinc-300'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>

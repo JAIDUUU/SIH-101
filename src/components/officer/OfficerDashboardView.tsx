@@ -28,6 +28,116 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
   onNavigate,
   onOpenAssistant,
 }) => {
+  const domainEntries = Object.entries(officer.domainScores || {}) as [string, number][];
+  const highestDomain: [string, number] = domainEntries.length > 0 ? [...domainEntries].sort((a, b) => Number(b[1]) - Number(a[1]))[0] : ['Statistical', 82];
+  const lowestDomain: [string, number] = domainEntries.length > 0 ? [...domainEntries].sort((a, b) => Number(a[1]) - Number(b[1]))[0] : ['Technical', 46];
+
+  const sortedGaps = [...(officer.competencies || [])]
+    .sort((a, b) => (b.targetScore - b.currentScore) - (a.targetScore - a.currentScore));
+  const biggestGapComp = sortedGaps[0] || null;
+  const biggestGapDelta = biggestGapComp ? Math.max(0, biggestGapComp.targetScore - biggestGapComp.currentScore) : 18;
+
+  if (!officer.isProfileSetup) {
+    return (
+      <div className="space-y-6 max-w-4xl mx-auto">
+        {/* Top Pending Banner */}
+        <div className="bg-white border border-zinc-900 p-6 shadow-xs">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[10px] font-technical uppercase font-bold text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5">
+              ONBOARDING INCOMPLETE // ACTION REQUIRED
+            </span>
+            <span className="text-xs font-technical text-zinc-500">
+              National Statistical Systems Training Academy (NSSTA)
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-950 font-heading">
+            Welcome to Skill Sutra, {officer.name}
+          </h1>
+          <p className="text-xs sm:text-sm text-zinc-600 mt-1 max-w-2xl font-sans">
+            Officer ID: <span className="font-mono font-bold text-zinc-900">{officer.id || officer.email}</span> · Status: <span className="text-amber-800 font-bold">Pending Cadre & Competency Calibration</span>
+          </p>
+        </div>
+
+        {/* Onboarding Wizard Gate */}
+        <div className="bg-white border border-zinc-900 p-6 sm:p-8 shadow-xs space-y-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-amber-100 border border-amber-300 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-6 h-6 text-amber-800" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-zinc-950 font-heading">
+                No Competency Dashboard Generated Yet
+              </h2>
+              <p className="text-xs sm:text-sm text-zinc-600 mt-1 leading-relaxed">
+                Your personal readiness score, AI skill decay forecasting, radar gap matrix, and iGOT Karmayogi course recommendations are generated only after you complete the official 5-step onboarding setup.
+              </p>
+            </div>
+          </div>
+
+          <div className="border border-zinc-200 bg-zinc-50 p-5">
+            <div className="text-[11px] font-technical uppercase font-bold text-zinc-500 tracking-wider mb-3">
+              5-STEP CALIBRATION CHECKLIST
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div className="flex items-center gap-2.5 p-3 bg-white border border-zinc-200">
+                <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-900 border border-amber-300 font-bold flex items-center justify-center text-[11px] shrink-0">1</span>
+                <div>
+                  <div className="font-bold text-zinc-900">Cadre & Service Hierarchy</div>
+                  <div className="text-[11px] text-zinc-500">Subordinate Statistical Service (SSS) or ISS</div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 p-3 bg-white border border-zinc-200">
+                <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-900 border border-amber-300 font-bold flex items-center justify-center text-[11px] shrink-0">2</span>
+                <div>
+                  <div className="font-bold text-zinc-900">Regional Station & FOD Posting</div>
+                  <div className="text-[11px] text-zinc-500">Zone, field station, or Ministry Central HQ</div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 p-3 bg-white border border-zinc-200">
+                <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-900 border border-amber-300 font-bold flex items-center justify-center text-[11px] shrink-0">3</span>
+                <div>
+                  <div className="font-bold text-zinc-900">Statistical Domain Mapping</div>
+                  <div className="text-[11px] text-zinc-500">National Accounts, Prices, Surveys, CAPI</div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 p-3 bg-white border border-zinc-200">
+                <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-900 border border-amber-300 font-bold flex items-center justify-center text-[11px] shrink-0">4</span>
+                <div>
+                  <div className="font-bold text-zinc-900">Technical Skills Self-Rating</div>
+                  <div className="text-[11px] text-zinc-500">R, Python, Sampling Design, Data Validation</div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 p-3 bg-white border border-zinc-200 sm:col-span-2">
+                <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-900 border border-amber-300 font-bold flex items-center justify-center text-[11px] shrink-0">5</span>
+                <div>
+                  <div className="font-bold text-zinc-900">Baseline Evaluation & Verification</div>
+                  <div className="text-[11px] text-zinc-500">Diagnostic gap analysis and initial Skill Passport issue</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+            <div className="text-xs text-zinc-500 font-technical">
+              ESTIMATED TIME: <strong>3 TO 4 MINUTES</strong>
+            </div>
+            <button
+              onClick={() => onNavigate('profile-setup')}
+              className="w-full sm:w-auto px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white text-xs font-technical uppercase tracking-wider font-bold shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>Start 5-Step Profile Setup</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Top Welcome & Cadre Status Banner */}
@@ -36,7 +146,7 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
           <div>
             <div className="flex items-center gap-2 mb-1.5">
               <span className="text-[10px] font-technical uppercase font-bold text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5">
-                ACTIVE CADRE MEMBER
+                {officer.statisticalDomain ? `${officer.statisticalDomain} Domain` : 'Statistical System'}
               </span>
               <span className="text-xs font-technical text-zinc-500">
                 {officer.cadre} · {officer.station}
@@ -56,7 +166,7 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
               className="px-3 sm:px-4 py-2 border border-zinc-900 bg-amber-50 hover:bg-amber-100 text-zinc-950 text-xs font-technical uppercase tracking-wider font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <CheckCircle2 className="w-4 h-4 text-amber-700" />
-              <span>{officer.isProfileSetup ? 'Update Profile' : 'Setup Profile'}</span>
+              <span>{officer.isProfileSetup ? 'Re-Run 5-Step Setup' : 'Setup Profile'}</span>
             </button>
             <button
               onClick={() => onNavigate('skill-passport')}
@@ -216,23 +326,23 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
               </span>
             </div>
             <h2 className="text-xl sm:text-2xl font-bold text-zinc-950 font-heading">
-              Your biggest current gap is{' '}
+              Your biggest priority gap is{' '}
               <span className="underline decoration-amber-500 decoration-3">
-                Python for Statistical Analysis
+                {biggestGapComp ? biggestGapComp.name : 'Statistical Methodology Refresher'}
               </span>
               .
             </h2>
             <p className="text-xs sm:text-sm text-zinc-600 max-w-2xl font-sans">
-              Your Technical domain score sits at 46%, significantly lagging your Statistical mastery (82%). 
-              Completing this foundational NSSTA microdata processing module will elevate your technical score by an estimated +18%.
+              Your {biggestGapComp ? biggestGapComp.domain : 'Technical'} domain score sits at {biggestGapComp ? biggestGapComp.currentScore : 46}%, lagging your target benchmark ({biggestGapComp ? biggestGapComp.targetScore : 80}%). 
+              Completing this tailored module will elevate your competency by an estimated +{Math.min(25, Math.round(biggestGapDelta * 0.8)) || 16}%.
             </p>
 
             <div className="flex flex-wrap items-center gap-4 text-xs font-technical text-zinc-700 pt-1">
-              <span>SOURCE: <strong>NSSTA TPAC</strong></span>
+              <span>MODULE: <strong>{biggestGapComp?.decayRisk?.refresherTitle || 'Curricular Drill'}</strong></span>
               <span>•</span>
-              <span>DURATION: <strong>18 Hours (Self-paced + Labs)</strong></span>
+              <span>DOMAIN: <strong>{biggestGapComp ? biggestGapComp.domain : 'Statistical'}</strong></span>
               <span>•</span>
-              <span>DIFFICULTY: <strong>Intermediate</strong></span>
+              <span>GAP DEFICIT: <strong className="text-amber-900">-{biggestGapDelta}%</strong></span>
             </div>
           </div>
 
@@ -285,11 +395,11 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
             <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-zinc-200 text-xs font-technical">
               <div className="p-2 bg-zinc-50 border border-zinc-200">
                 <span className="text-zinc-500 block text-[10px]">HIGHEST DOMAIN</span>
-                <span className="font-bold text-zinc-950">Statistical (82%)</span>
+                <span className="font-bold text-zinc-950">{highestDomain[0]} ({highestDomain[1]}%)</span>
               </div>
               <div className="p-2 bg-amber-50 border border-amber-300">
                 <span className="text-amber-800 block text-[10px] font-bold">PRIORITY DEFICIT</span>
-                <span className="font-bold text-zinc-950">Technical (46%)</span>
+                <span className="font-bold text-zinc-950">{lowestDomain[0]} ({lowestDomain[1]}%)</span>
               </div>
             </div>
           </div>
@@ -343,62 +453,95 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
         {/* Right Col (7 cols): Current Skill Gaps & Active Learning Modules */}
         <div className="lg:col-span-7 space-y-6">
           {/* Current Skill Gaps Table */}
-          <div className="bg-white border border-zinc-300 p-6 shadow-xs">
-            <div className="flex items-center justify-between border-b border-zinc-200 pb-3 mb-4">
+          <div className="bg-white border border-zinc-300 p-6 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-200 pb-3">
               <div>
-                <div className="text-[10px] font-technical uppercase tracking-wider text-zinc-500 font-bold">
-                  DIAGNOSTIC GAP MATRIX
+                <div className="text-[10px] font-technical uppercase tracking-wider text-amber-800 font-bold">
+                  DIAGNOSTIC GAP MATRIX & DEFICIT ANALYSIS
                 </div>
                 <h3 className="text-base font-bold text-zinc-950 font-heading">
-                  Current Skill Gaps & Target Thresholds
+                  Identified Cadre Competency Gaps
                 </h3>
               </div>
               <span className="text-xs font-technical text-zinc-500">
-                Ranked by Cadre Priority
+                Formula: Target Benchmark − Verified Score
               </span>
+            </div>
+
+            {/* Clear Educational Explainer on How Skill Gaps are Derived */}
+            <div className="p-3.5 bg-amber-50/70 border border-amber-300 text-xs font-sans text-amber-950 space-y-1">
+              <div className="font-bold font-technical text-[11px] uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-700" />
+                <span>How Your Skill Gaps Are Calculated:</span>
+              </div>
+              <p className="text-[11px] leading-relaxed text-zinc-700">
+                Skill Sutra compares your current verified proficiency against the official <strong>{officer.cadre}</strong> benchmark. A <strong>Skill Gap</strong> exists wherever your verified score is below benchmark. Gaps are closed through certified iGOT courses and verified with AI Grounded Assessments.
+              </p>
             </div>
 
             <div className="space-y-3">
               {officer.competencies
                 .filter((c) => c.currentScore < c.targetScore)
-                .slice(0, 4)
+                .slice(0, 5)
                 .map((comp) => {
                   const gap = comp.targetScore - comp.currentScore;
+                  const isRequired = comp.isRequired || comp.category === 'REQUIRED';
+                  const isSevere = gap >= 20;
+
                   return (
                     <div
                       key={comp.id}
                       className="p-3.5 border border-zinc-200 bg-[#FAFAFA] flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-zinc-400 transition-colors"
                     >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span className="text-xs font-bold text-zinc-950 font-heading">
                             {comp.name}
                           </span>
                           <span
                             className={`text-[9px] font-technical px-1.5 py-0.2 font-semibold ${
-                              comp.verification === 'SYSTEM-VERIFIED'
-                                ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                                : 'bg-amber-100 text-amber-900 border border-amber-300'
+                              isRequired
+                                ? 'bg-amber-100 text-amber-950 border border-amber-300'
+                                : 'bg-zinc-100 text-zinc-700 border border-zinc-300'
                             }`}
                           >
-                            {comp.verification}
+                            {isRequired ? '★ REQUIRED' : 'ADDITIONAL'}
+                          </span>
+                          <span
+                            className={`text-[9px] font-technical px-1.5 py-0.2 font-semibold ${
+                              isSevere
+                                ? 'bg-rose-100 text-rose-950 border border-rose-300'
+                                : 'bg-amber-100 text-amber-950 border border-amber-300'
+                            }`}
+                          >
+                            {isSevere ? 'CRITICAL DEFICIT' : 'MODERATE GAP'}
                           </span>
                         </div>
                         <div className="text-[11px] text-zinc-500 font-sans">
-                          Domain: {comp.domain} · {comp.evidence.slice(0, 55)}...
+                          Domain: {comp.domain} {comp.statisticalDomain ? `· ${comp.statisticalDomain}` : ''}
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-4 shrink-0 font-technical text-xs">
+                      <div className="flex items-center gap-3 shrink-0 font-technical text-xs">
                         <div className="text-right">
-                          <span className="text-zinc-500 block text-[10px]">CURRENT / TARGET</span>
+                          <span className="text-zinc-500 block text-[9px] uppercase">SCORE / TARGET</span>
                           <span className="font-bold text-zinc-950">
-                            {comp.currentScore}% / {comp.targetScore}%
+                            {comp.currentScore}% <span className="text-zinc-400">/</span> {comp.targetScore}%
                           </span>
                         </div>
-                        <div className="px-2.5 py-1 bg-zinc-200/80 font-bold text-zinc-900 border border-zinc-300 text-center min-w-16">
-                          Δ -{gap}%
+
+                        <div className={`px-2.5 py-1 font-bold text-xs border text-center min-w-16 ${
+                          isSevere ? 'bg-rose-100 text-rose-950 border-rose-300' : 'bg-amber-100 text-amber-950 border-amber-300'
+                        }`}>
+                          -{gap}% Deficit
                         </div>
+
+                        <button
+                          onClick={() => onNavigate('courses')}
+                          className="px-2.5 py-1 bg-zinc-950 hover:bg-black text-amber-400 text-[10px] uppercase font-bold cursor-pointer"
+                        >
+                          Close Gap →
+                        </button>
                       </div>
                     </div>
                   );
@@ -406,12 +549,12 @@ export const OfficerDashboardView: React.FC<OfficerDashboardViewProps> = ({
             </div>
 
             <div className="mt-4 pt-3 border-t border-zinc-200 flex justify-between items-center text-xs font-technical">
-              <span className="text-zinc-500">Showing top 4 high-impact gaps</span>
+              <span className="text-zinc-500">Showing prioritized gaps for {officer.cadre}</span>
               <button
                 onClick={() => onNavigate('competencies')}
                 className="text-amber-800 hover:underline font-bold uppercase flex items-center gap-1"
               >
-                <span>View Full Competency Intelligence</span>
+                <span>View Full Competency Diagnostic</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>

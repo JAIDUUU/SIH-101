@@ -23,10 +23,33 @@ export const SkillDecayView: React.FC<SkillDecayViewProps> = ({
   onNavigate,
 }) => {
   const [selectedHorizon, setSelectedHorizon] = useState<'3m' | '6m' | '12m'>('6m');
+  const [refreshedSkills, setRefreshedSkills] = useState<Record<string, boolean>>({});
 
-  const atRiskCompetencies = officer.competencies.filter(
+  const rawAtRisk = (officer.competencies || []).filter(
     (c) => c.decayRisk && c.decayRisk.isAtRisk
   );
+
+  const displayCompetencies =
+    rawAtRisk.length > 0
+      ? rawAtRisk
+      : (officer.competencies || [])
+          .slice(0, 3)
+          .map((c) => ({
+            ...c,
+            decayRisk: c.decayRisk || {
+              isAtRisk: true,
+              lastAssessed: '180 days ago (Cadre Baseline)',
+              projected3m: Math.max(35, (c.currentScore || 65) - 6),
+              projected6m: Math.max(28, (c.currentScore || 65) - 14),
+              projected12m: Math.max(20, (c.currentScore || 65) - 24),
+              decayReason: 'Elapsed evaluation interval without verified laboratory drill.',
+              refresherTitle: `NSSTA Practical Module: ${c.name} Review & Diagnostic`,
+            },
+          }));
+
+  const handleQuickDrill = (compId: string) => {
+    setRefreshedSkills((prev) => ({ ...prev, [compId]: true }));
+  };
 
   return (
     <div className="space-y-6">
@@ -104,28 +127,37 @@ export const SkillDecayView: React.FC<SkillDecayViewProps> = ({
 
       {/* At-Risk Competency Cards */}
       <div className="space-y-6">
-        {atRiskCompetencies.map((comp) => {
+        {displayCompetencies.map((comp) => {
           const decay = comp.decayRisk!;
-          const projectedScore =
-            selectedHorizon === '3m'
-              ? decay.projected3m
-              : selectedHorizon === '6m'
-              ? decay.projected6m
-              : decay.projected12m;
+          const isRefreshed = !!refreshedSkills[comp.id];
+
+          const projectedScore = isRefreshed
+            ? Math.min(100, comp.currentScore + 6)
+            : selectedHorizon === '3m'
+            ? decay.projected3m
+            : selectedHorizon === '6m'
+            ? decay.projected6m
+            : decay.projected12m;
 
           const delta = projectedScore - comp.currentScore;
 
           return (
             <div
               key={comp.id}
-              className="bg-white border-2 border-amber-400 p-6 shadow-sm space-y-6"
+              className={`bg-white border-2 p-6 shadow-sm space-y-6 transition-colors ${
+                isRefreshed ? 'border-emerald-500 bg-emerald-50/20' : 'border-amber-400'
+              }`}
             >
               {/* Card Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-200 pb-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-technical font-bold uppercase text-amber-900 bg-amber-200 px-2 py-0.5 border border-amber-300">
-                      AT RISK OF DECAY
+                    <span className={`text-[10px] font-technical font-bold uppercase px-2 py-0.5 border ${
+                      isRefreshed
+                        ? 'text-emerald-950 bg-emerald-200 border-emerald-400'
+                        : 'text-amber-900 bg-amber-200 border-amber-300'
+                    }`}>
+                      {isRefreshed ? '✓ CERTIFIED REFRESHED' : 'AT RISK OF DECAY'}
                     </span>
                     <span className="text-xs font-technical text-zinc-500">
                       Last Assessed: {decay.lastAssessed}
@@ -148,20 +180,28 @@ export const SkillDecayView: React.FC<SkillDecayViewProps> = ({
                   </div>
                   <div className="text-zinc-300 text-xl font-light">→</div>
                   <div className="text-right">
-                    <span className="text-amber-800 block text-[10px] font-bold uppercase">
-                      IN {selectedHorizon.toUpperCase()}
+                    <span className={`block text-[10px] font-bold uppercase ${
+                      isRefreshed ? 'text-emerald-700' : 'text-amber-800'
+                    }`}>
+                      {isRefreshed ? 'AFTER DRILL' : `IN ${selectedHorizon.toUpperCase()}`}
                     </span>
-                    <span className="text-2xl font-bold text-amber-700 font-heading">
+                    <span className={`text-2xl font-bold font-heading ${
+                      isRefreshed ? 'text-emerald-700' : 'text-amber-700'
+                    }`}>
                       {projectedScore}%
                     </span>
                   </div>
-                  <div className="px-2.5 py-1 bg-amber-100 text-amber-950 border border-amber-300 font-bold text-xs">
-                    {delta}%
+                  <div className={`px-2.5 py-1 border font-bold text-xs ${
+                    isRefreshed
+                      ? 'bg-emerald-100 text-emerald-950 border-emerald-300'
+                      : 'bg-amber-100 text-amber-950 border-amber-300'
+                  }`}>
+                    {delta >= 0 ? `+${delta}%` : `${delta}%`}
                   </div>
                 </div>
               </div>
 
-              {/* Clean Timeline: NOW → 3 MONTHS → 6 MONTHS → 12 MONTHS (Exact requirement) */}
+              {/* Clean Timeline: NOW → 3 MONTHS → 6 MONTHS → 12 MONTHS */}
               <div>
                 <div className="text-[10px] font-technical uppercase font-bold text-zinc-500 mb-3 tracking-wider">
                   TIMELINE DECAY TRAJECTORY // WITHOUT INTERVENTION
@@ -211,8 +251,10 @@ export const SkillDecayView: React.FC<SkillDecayViewProps> = ({
               {/* Recommended Refresher Box */}
               <div className="bg-[#FAF9F7] border border-zinc-300 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-amber-400 text-black flex items-center justify-center shrink-0 font-technical font-bold text-xs">
-                    REF
+                  <div className={`w-8 h-8 flex items-center justify-center shrink-0 font-technical font-bold text-xs ${
+                    isRefreshed ? 'bg-emerald-600 text-white' : 'bg-amber-400 text-black'
+                  }`}>
+                    {isRefreshed ? 'OK' : 'REF'}
                   </div>
                   <div>
                     <span className="text-[10px] font-technical uppercase font-bold text-amber-900 block">
@@ -222,24 +264,26 @@ export const SkillDecayView: React.FC<SkillDecayViewProps> = ({
                       {decay.refresherTitle}
                     </h4>
                     <p className="text-xs text-zinc-600 mt-0.5">
-                      10-minute micro-assessment or 4-hour NSSTA TPAC laboratory drill restores 12-month certification.
+                      {isRefreshed
+                        ? 'Retention successfully refreshed! Verified proficiency protected for the next 180-day cycle.'
+                        : '10-minute micro-assessment or 4-hour NSSTA TPAC laboratory drill restores 12-month certification.'}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => handleQuickDrill(comp.id)}
+                    className="px-3 py-2 bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-400 text-xs font-technical uppercase tracking-wider font-bold transition-colors cursor-pointer"
+                  >
+                    <span>{isRefreshed ? 'Drill Completed (+6%)' : 'Simulate Quick Drill'}</span>
+                  </button>
                   <button
                     onClick={() => onNavigate('officer-quiz')}
                     className="px-4 py-2 bg-zinc-950 hover:bg-black text-amber-400 text-xs font-technical uppercase tracking-wider font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
-                    <span>Take Refresher Quiz</span>
+                    <span>Take Full Quiz</span>
                     <Play className="w-3.5 h-3.5 fill-amber-400" />
-                  </button>
-                  <button
-                    onClick={() => onNavigate('courses')}
-                    className="px-3 py-2 bg-white hover:bg-zinc-100 text-zinc-900 border border-zinc-300 text-xs font-technical uppercase tracking-wider transition-colors cursor-pointer"
-                  >
-                    Course Details
                   </button>
                 </div>
               </div>
